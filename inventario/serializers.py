@@ -6,9 +6,8 @@ class DispositivoSerializer(serializers.ModelSerializer):
         model = Dispositivo
         fields = ['id', 'name', 'descripcion']
 
-
 class EquipoSerializer(serializers.ModelSerializer):
-    dispositivo = serializers.ReadOnlyField(source= 'dispositivo.name')
+    dispositivo_name = serializers.ReadOnlyField(source= 'dispositivo.name')
     class Meta:
         model = Equipo
-        fields = ['id', 'dispositivo' ,'marca', 'modelo', 'identificador', 'estacion', 'descripcion', 'date_reg']
+        fields = ['id', 'dispositivo' ,'dispositivo_name', 'marca', 'modelo', 'identificador', 'estacion', 'descripcion', 'date_reg']

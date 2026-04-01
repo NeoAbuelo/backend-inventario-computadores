@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}InvCompu API{% endblock %} — Documentación</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'doc/styles/style.css' %}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ══════════════════ SIDEBAR ══════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <a href="{% url 'doc:index' %}">
+        <div class="logo-icon">🖥️</div>
+        <div class="logo-text">
+          <span class="logo-title">InvCompu API</span>
+          <span class="logo-version">v1.0 · REST API</span>
+        </div>
+      </a>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">General</div>
+      <a href="{% url 'doc:index' %}" class="{% block nav_index %}{% endblock %}">
+        <span class="nav-icon">🏠</span> Inicio
+      </a>
+      <a href="{% url 'doc:index' %}#base-url">
+        <span class="nav-icon">🔗</span> Base URL
+      </a>
+      <a href="{% url 'doc:index' %}#paginacion">
+        <span class="nav-icon">📄</span> Paginación
+      </a>
+      <a href="{% url 'doc:index' %}#respuestas">
+        <span class="nav-icon">📦</span> Respuestas
+      </a>
+
+      <div class="nav-section" style="margin-top:12px;">Módulo Inventario</div>
+      <a href="{% url 'doc:inventario' %}" class="{% block nav_inventario %}{% endblock %}">
+        <span class="nav-icon">🗄️</span> Inventario
+      </a>
+      <a href="{% url 'doc:inventario' %}#dispositivos" class="sub-link">
+        <span class="nav-icon">💡</span> Dispositivos
+      </a>
+      <a href="{% url 'doc:inventario' %}#equipos" class="sub-link">
+        <span class="nav-icon">🖥️</span> Equipos
+      </a>
+
+      <div class="nav-section" style="margin-top:12px;">Módulo Sala de PCs</div>
+      <a href="{% url 'doc:salapcs' %}" class="{% block nav_salapcs %}{% endblock %}">
+        <span class="nav-icon">🏫</span> Sala de PCs
+      </a>
+      <a href="{% url 'doc:salapcs' %}#profesores" class="sub-link">
+        <span class="nav-icon">👨‍🏫</span> Profesores
+      </a>
+      <a href="{% url 'doc:salapcs' %}#salapcs" class="sub-link">
+        <span class="nav-icon">📅</span> Reservas SalaPC
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      Django REST Framework &nbsp;·&nbsp; API v1
+    </div>
+  </aside>
+
+  <!-- ══════════════════ MAIN ══════════════════ -->
+  <div class="main-wrapper">
+    <header class="top-header">
+      <h1>{% block header_title %}Documentación API{% endblock %}</h1>
+      <span class="header-badge">
+        🌐 Base: <code style="font-family:monospace;font-size:11px;">/api/v1/</code>
+      </span>
+    </header>
+
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script>
+    // Toggle endpoint body
+    document.querySelectorAll('.endpoint-header').forEach(function(header) {
+      header.addEventListener('click', function() {
+        const body = this.nextElementSibling;
+        const arrow = this.querySelector('.toggle-arrow');
+        const isOpen = body.classList.toggle('open');
+        this.classList.toggle('open', isOpen);
+        if (arrow) arrow.textContent = isOpen ? '▼' : '▶';
+      });
+    });
+
+    // Mark active sidebar link
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.sidebar-nav a').forEach(function(link) {
+      if (link.getAttribute('href') === currentPath) {
+        link.classList.add('active');
+      }
+    });
+  </script>
+</body>
+</html>

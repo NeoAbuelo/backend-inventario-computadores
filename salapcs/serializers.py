@@ -7,7 +7,7 @@ class ProfesorSerializer(serializers.ModelSerializer):
         fields = ["nombre", "apellido", "correo", "asignatura"]
 
 class SalaPCSerializer(serializers.ModelSerializer):
-    profesor = ProfesorSerializer()
+    profesor_name = serializers.ReadOnlyField(source='profesor.nombre')
     class Meta:
         model = SalaPC
-        fields = ["profesor", "curso", "asignatura", "date", "hour"]
+        fields = ["profesor", "profesor_name", "curso", "asignatura", "date", "hour"]

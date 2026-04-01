@@ -1,0 +1,630 @@
+{% extends "doc/base.html" %}
+{% block title %}Sala de PCs{% endblock %}
+{% block header_title %}Módulo Sala de PCs{% endblock %}
+{% block nav_salapcs %}active{% endblock %}
+
+{% block content %}
+
+<div class="section">
+  <h1 class="section-title">Sala de PCs</h1>
+  <p class="section-subtitle">
+    Gestión de <strong>Profesores</strong> y <strong>Reservas de Sala</strong> del laboratorio de computación.
+  </p>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <div>
+      Un <strong>Profesor</strong> es el docente que solicita el uso de la sala.
+      Una <strong>SalaPC</strong> es el registro de una sesión de uso: vincula al profesor con un curso,
+      asignatura, fecha y hora de inicio.
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-box blue">
+      <div class="stat-num">4</div>
+      <div class="stat-label">Endpoints Profesores</div>
+    </div>
+    <div class="stat-box green">
+      <div class="stat-num">4</div>
+      <div class="stat-label">Endpoints Reservas</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MODELOS
+     ════════════════════════════════════ -->
+<div class="section">
+  <h2 class="section-title">Modelos de Datos</h2>
+
+  <!-- Profesor -->
+  <div class="model-block">
+    <div class="model-header">
+      <h4>Profesor</h4>
+      <span class="db-table">tabla: profesor</span>
+    </div>
+    <div class="model-body">
+      <table class="params-table">
+        <thead>
+          <tr><th>Campo</th><th>Tipo</th><th>Constraint</th><th>Descripción</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-readonly">auto</span></td>
+            <td>Clave primaria autoincremental.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">nombre</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Nombre del profesor.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">apellido</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Apellido del profesor.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">correo</span></td>
+            <td><span class="field-type">email</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Dirección de correo electrónico. Debe ser un email válido.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">asignatura</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Asignatura que imparte el profesor.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SalaPC -->
+  <div class="model-block">
+    <div class="model-header">
+      <h4>SalaPC</h4>
+      <span class="db-table">tabla: salapc</span>
+    </div>
+    <div class="model-body">
+      <table class="params-table">
+        <thead>
+          <tr><th>Campo</th><th>Tipo</th><th>Constraint</th><th>Descripción</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-readonly">auto</span></td>
+            <td>Clave primaria autoincremental.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">profesor</span></td>
+            <td><span class="field-type">FK → Profesor</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>ID del profesor que reserva la sala. Se elimina en cascada.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">curso</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Nombre o código del curso que hará uso de la sala.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">asignatura</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Asignatura para la cual se usa el laboratorio en esta sesión.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">date</span></td>
+            <td><span class="field-type">date</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Fecha de uso de la sala. Formato: <code>YYYY-MM-DD</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">hour</span></td>
+            <td><span class="field-type">time</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Hora de inicio de la sesión. Formato: <code>HH:MM:SS</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     PROFESORES
+     ════════════════════════════════════ -->
+<div class="section" id="profesores">
+  <h2 class="section-title">Profesores</h2>
+  <p class="section-subtitle">CRUD completo sobre el registro de profesores.</p>
+
+  <!-- GET /profesores -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/profesores</span>
+      <span class="endpoint-desc">Listar todos los profesores (paginado)</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de consulta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">page</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Número de página (predeterminado: 1).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">Limit</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Registros por página (predeterminado: 20, máx: 100).</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes"><span class="response-code r200">200 OK</span></div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK — application/json</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"links"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
+    <span class="json-key">"next"</span><span class="json-punc">:</span>     <span class="json-null">null</span><span class="json-punc">,</span>
+    <span class="json-key">"previous"</span><span class="json-punc">:</span> <span class="json-null">null</span>
+  <span class="json-punc">},</span>
+  <span class="json-key">"items"</span><span class="json-punc">:</span>  <span class="json-num">5</span><span class="json-punc">,</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"page"</span><span class="json-punc">:</span>   <span class="json-str">"1/1"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">[</span>
+    <span class="json-punc">{</span>
+      <span class="json-key">"nombre"</span><span class="json-punc">:</span>     <span class="json-str">"Carlos"</span><span class="json-punc">,</span>
+      <span class="json-key">"apellido"</span><span class="json-punc">:</span>   <span class="json-str">"González"</span><span class="json-punc">,</span>
+      <span class="json-key">"correo"</span><span class="json-punc">:</span>     <span class="json-str">"cgonzalez@colegio.cl"</span><span class="json-punc">,</span>
+      <span class="json-key">"asignatura"</span><span class="json-punc">:</span> <span class="json-str">"Tecnología e Informática"</span>
+    <span class="json-punc">},</span>
+    <span class="json-punc">...</span>
+  <span class="json-punc">]</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST /profesores -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge POST">POST</span>
+      <span class="endpoint-path">/api/v1/profesores</span>
+      <span class="endpoint-desc">Registrar un nuevo profesor</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Cuerpo de la petición (JSON)</p>
+      <table class="params-table">
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">nombre</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Nombre del profesor (máx. 100 caracteres).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">apellido</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Apellido del profesor (máx. 100 caracteres).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">correo</span></td>
+            <td><span class="field-type">string (email)</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Correo electrónico válido del profesor.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">asignatura</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Asignatura que imparte (máx. 100 caracteres).</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="params-title">Ejemplo de petición</p>
+      <div class="code-block">
+        <div class="code-header"><span>Request Body</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"nombre"</span><span class="json-punc">:</span>     <span class="json-str">"Ana"</span><span class="json-punc">,</span>
+  <span class="json-key">"apellido"</span><span class="json-punc">:</span>   <span class="json-str">"Martínez"</span><span class="json-punc">,</span>
+  <span class="json-key">"correo"</span><span class="json-punc">:</span>     <span class="json-str">"amartinez@colegio.cl"</span><span class="json-punc">,</span>
+  <span class="json-key">"asignatura"</span><span class="json-punc">:</span> <span class="json-str">"Matemáticas"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+      <div class="response-codes">
+        <span class="response-code r201">201 Created</span>
+        <span class="response-code r400">400 Bad Request</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>201 Created</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Profesor creado exitosamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET /profesores/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/profesores/{id}</span>
+      <span class="endpoint-desc">Obtener un profesor por ID</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID del profesor a consultar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
+    <span class="json-key">"nombre"</span><span class="json-punc">:</span>     <span class="json-str">"Ana"</span><span class="json-punc">,</span>
+    <span class="json-key">"apellido"</span><span class="json-punc">:</span>   <span class="json-str">"Martínez"</span><span class="json-punc">,</span>
+    <span class="json-key">"correo"</span><span class="json-punc">:</span>     <span class="json-str">"amartinez@colegio.cl"</span><span class="json-punc">,</span>
+    <span class="json-key">"asignatura"</span><span class="json-punc">:</span> <span class="json-str">"Matemáticas"</span>
+  <span class="json-punc">}</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUT /profesores/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge PUT">PUT</span>
+      <span class="endpoint-path">/api/v1/profesores/{id}</span>
+      <span class="endpoint-desc">Actualizar un profesor</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>Actualización <strong>completa</strong>. Se deben enviar todos los campos definidos en el modelo.</div>
+      </div>
+      <p class="params-title">Cuerpo de la petición</p>
+      <p style="font-size:13.5px;color:#64748b;margin-bottom:16px;">Mismos campos que el POST. Ver sección anterior para referencia.</p>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r400">400 Bad Request</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Profesor actualizado exitosamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE /profesores/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge DELETE">DELETE</span>
+      <span class="endpoint-path">/api/v1/profesores/{id}</span>
+      <span class="endpoint-desc">Eliminar un profesor</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>
+          Al eliminar un profesor se eliminarán <strong>todas sus reservas de sala</strong>
+          asociadas (relación <code>CASCADE</code>). Esta acción es irreversible.
+        </div>
+      </div>
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID del profesor a eliminar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Profesor eliminado correctamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SALA PCS
+     ════════════════════════════════════ -->
+<div class="section" id="salapcs">
+  <h2 class="section-title">Reservas de Sala (SalaPC)</h2>
+  <p class="section-subtitle">Registro y gestión de las sesiones de uso del laboratorio de computación.</p>
+
+  <!-- GET /salapcs -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/salapcs</span>
+      <span class="endpoint-desc">Listar todas las reservas (paginado)</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de consulta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">page</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Número de página (predeterminado: 1).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">Limit</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Registros por página (predeterminado: 20, máx: 100).</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes"><span class="response-code r200">200 OK</span></div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK — application/json</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"links"</span><span class="json-punc">:</span>  <span class="json-punc">{ ... },</span>
+  <span class="json-key">"items"</span><span class="json-punc">:</span>  <span class="json-num">12</span><span class="json-punc">,</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"page"</span><span class="json-punc">:</span>   <span class="json-str">"1/1"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">[</span>
+    <span class="json-punc">{</span>
+      <span class="json-key">"profesor"</span><span class="json-punc">:</span>      <span class="json-num">3</span><span class="json-punc">,</span>
+      <span class="json-key">"profesor_name"</span><span class="json-punc">:</span> <span class="json-str">"Ana"</span><span class="json-punc">,</span>
+      <span class="json-key">"curso"</span><span class="json-punc">:</span>         <span class="json-str">"3°B"</span><span class="json-punc">,</span>
+      <span class="json-key">"asignatura"</span><span class="json-punc">:</span>    <span class="json-str">"Tecnología"</span><span class="json-punc">,</span>
+      <span class="json-key">"date"</span><span class="json-punc">:</span>          <span class="json-str">"2026-04-01"</span><span class="json-punc">,</span>
+      <span class="json-key">"hour"</span><span class="json-punc">:</span>          <span class="json-str">"10:00:00"</span>
+    <span class="json-punc">},</span>
+    <span class="json-punc">...</span>
+  <span class="json-punc">]</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST /salapcs -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge POST">POST</span>
+      <span class="endpoint-path">/api/v1/salapcs</span>
+      <span class="endpoint-desc">Registrar una nueva reserva de sala</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Cuerpo de la petición (JSON)</p>
+      <table class="params-table">
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">profesor</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>ID del profesor que reserva la sala.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">curso</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Identificación del curso (ej. "3°B", "4°A"). Máx. 100 caracteres.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">asignatura</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Asignatura para la cual se usa la sala. Máx. 100 caracteres.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">date</span></td>
+            <td><span class="field-type">string (date)</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Fecha de uso de la sala. Formato: <code>YYYY-MM-DD</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">hour</span></td>
+            <td><span class="field-type">string (time)</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Hora de inicio de la sesión. Formato: <code>HH:MM:SS</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="params-title">Ejemplo de petición</p>
+      <div class="code-block">
+        <div class="code-header"><span>Request Body</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"profesor"</span><span class="json-punc">:</span>   <span class="json-num">3</span><span class="json-punc">,</span>
+  <span class="json-key">"curso"</span><span class="json-punc">:</span>      <span class="json-str">"3°B"</span><span class="json-punc">,</span>
+  <span class="json-key">"asignatura"</span><span class="json-punc">:</span> <span class="json-str">"Tecnología"</span><span class="json-punc">,</span>
+  <span class="json-key">"date"</span><span class="json-punc">:</span>       <span class="json-str">"2026-04-01"</span><span class="json-punc">,</span>
+  <span class="json-key">"hour"</span><span class="json-punc">:</span>       <span class="json-str">"10:00:00"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+      <div class="response-codes">
+        <span class="response-code r201">201 Created</span>
+        <span class="response-code r400">400 Bad Request</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>201 Created</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"SalaPC created successfully"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET /salapcs/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/salapcs/{id}</span>
+      <span class="endpoint-desc">Obtener una reserva por ID</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID de la reserva a consultar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
+    <span class="json-key">"profesor"</span><span class="json-punc">:</span>      <span class="json-num">3</span><span class="json-punc">,</span>
+    <span class="json-key">"profesor_name"</span><span class="json-punc">:</span> <span class="json-str">"Ana"</span><span class="json-punc">,</span>
+    <span class="json-key">"curso"</span><span class="json-punc">:</span>         <span class="json-str">"3°B"</span><span class="json-punc">,</span>
+    <span class="json-key">"asignatura"</span><span class="json-punc">:</span>    <span class="json-str">"Tecnología"</span><span class="json-punc">,</span>
+    <span class="json-key">"date"</span><span class="json-punc">:</span>          <span class="json-str">"2026-04-01"</span><span class="json-punc">,</span>
+    <span class="json-key">"hour"</span><span class="json-punc">:</span>          <span class="json-str">"10:00:00"</span>
+  <span class="json-punc">}</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUT /salapcs/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge PUT">PUT</span>
+      <span class="endpoint-path">/api/v1/salapcs/{id}</span>
+      <span class="endpoint-desc">Actualizar una reserva de sala</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>Actualización <strong>completa</strong>. Se deben enviar todos los campos del modelo.</div>
+      </div>
+      <p class="params-title">Cuerpo de la petición</p>
+      <p style="font-size:13.5px;color:#64748b;margin-bottom:16px;">Mismos campos requeridos que el POST. Ver sección anterior para referencia completa.</p>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r400">400 Bad Request</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"SalaPC updated successfully"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE /salapcs/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge DELETE">DELETE</span>
+      <span class="endpoint-path">/api/v1/salapcs/{id}</span>
+      <span class="endpoint-desc">Eliminar una reserva de sala</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID de la reserva a eliminar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r204">204 No Content</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"SalaPC deleted successfully"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

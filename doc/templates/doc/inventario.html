@@ -1,0 +1,710 @@
+{% extends "doc/base.html" %}
+{% block title %}Inventario{% endblock %}
+{% block header_title %}Módulo Inventario{% endblock %}
+{% block nav_inventario %}active{% endblock %}
+
+{% block content %}
+
+<div class="section">
+  <h1 class="section-title">Inventario</h1>
+  <p class="section-subtitle">
+    Gestión de <strong>Dispositivos</strong> (tipos de hardware) y <strong>Equipos</strong> (unidades físicas del laboratorio).
+  </p>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <div>
+      Un <strong>Dispositivo</strong> es la categoría del hardware (p.ej. "Computadora de Escritorio", "Monitor", "Teclado").
+      Un <strong>Equipo</strong> es la unidad física concreta, asociada a un dispositivo y asignada a una estación de trabajo.
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-box blue">
+      <div class="stat-num">5</div>
+      <div class="stat-label">Endpoints Dispositivos</div>
+    </div>
+    <div class="stat-box green">
+      <div class="stat-num">6</div>
+      <div class="stat-label">Endpoints Equipos</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MODELOS
+     ════════════════════════════════════ -->
+<div class="section">
+  <h2 class="section-title">Modelos de Datos</h2>
+
+  <!-- Dispositivo -->
+  <div class="model-block">
+    <div class="model-header">
+      <h4>Dispositivo</h4>
+      <span class="db-table">tabla: dispositivo</span>
+    </div>
+    <div class="model-body">
+      <table class="params-table">
+        <thead>
+          <tr><th>Campo</th><th>Tipo</th><th>Constraint</th><th>Descripción</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-readonly">auto</span></td>
+            <td>Clave primaria autoincremental.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">name</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-required">requerido</span>&nbsp;<span class="badge-readonly">único</span></td>
+            <td>Nombre del tipo de dispositivo. Debe ser único.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">descripcion</span></td>
+            <td><span class="field-type">text</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Descripción detallada del tipo de dispositivo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Equipo -->
+  <div class="model-block">
+    <div class="model-header">
+      <h4>Equipo</h4>
+      <span class="db-table">tabla: equipo</span>
+    </div>
+    <div class="model-body">
+      <table class="params-table">
+        <thead>
+          <tr><th>Campo</th><th>Tipo</th><th>Constraint</th><th>Descripción</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-readonly">auto</span></td>
+            <td>Clave primaria autoincremental.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">dispositivo</span></td>
+            <td><span class="field-type">FK → Dispositivo</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>ID del dispositivo al que pertenece este equipo. Se elimina en cascada.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">marca</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Marca del equipo (ej. Dell, HP, Lenovo).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">modelo</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Modelo específico del equipo.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">identificador</span></td>
+            <td><span class="field-type">string(100)</span></td>
+            <td><span class="badge-required">requerido</span>&nbsp;<span class="badge-readonly">único</span></td>
+            <td>Código o número de serie único que identifica físicamente al equipo.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">estacion</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-required">requerido</span>&nbsp;<span class="badge-readonly">único</span></td>
+            <td>Número de estación de trabajo a la que está asignado el equipo.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">descripcion</span></td>
+            <td><span class="field-type">text</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Observaciones o detalles adicionales del equipo.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">date_reg</span></td>
+            <td><span class="field-type">date</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Fecha de registro/ingreso del equipo al inventario. Formato: <code>YYYY-MM-DD</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     DISPOSITIVOS
+     ════════════════════════════════════ -->
+<div class="section" id="dispositivos">
+  <h2 class="section-title">Dispositivos</h2>
+  <p class="section-subtitle">CRUD completo sobre los tipos de dispositivos del inventario.</p>
+
+  <!-- GET /dispositivos -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/dispositivos</span>
+      <span class="endpoint-desc">Listar todos los dispositivos (paginado)</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div>Retorna la lista paginada de todos los dispositivos ordenados por <code>-id</code> (más recientes primero).</div>
+      </div>
+
+      <p class="params-title">Parámetros de consulta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">page</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Número de página (predeterminado: 1).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">page_size</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Registros por página (predeterminado: 10, máx: 100).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="params-title">Respuesta exitosa</p>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK — application/json</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"links"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
+    <span class="json-key">"next"</span><span class="json-punc">:</span>     <span class="json-str">"http://127.0.0.1:8000/api/v1/dispositivos?page=2"</span><span class="json-punc">,</span>
+    <span class="json-key">"previous"</span><span class="json-punc">:</span> <span class="json-null">null</span>
+  <span class="json-punc">},</span>
+  <span class="json-key">"items"</span><span class="json-punc">:</span>  <span class="json-num">15</span><span class="json-punc">,</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"page"</span><span class="json-punc">:</span>   <span class="json-str">"1/2"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">[</span>
+    <span class="json-punc">{</span>
+      <span class="json-key">"id"</span><span class="json-punc">:</span>          <span class="json-num">3</span><span class="json-punc">,</span>
+      <span class="json-key">"name"</span><span class="json-punc">:</span>        <span class="json-str">"Computadora de Escritorio"</span><span class="json-punc">,</span>
+      <span class="json-key">"descripcion"</span><span class="json-punc">:</span> <span class="json-str">"PC de escritorio con torre ATX"</span>
+    <span class="json-punc">},</span>
+    <span class="json-punc">...</span>
+  <span class="json-punc">]</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST /dispositivos -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge POST">POST</span>
+      <span class="endpoint-path">/api/v1/dispositivos</span>
+      <span class="endpoint-desc">Crear un nuevo dispositivo</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Cuerpo de la petición (JSON)</p>
+      <table class="params-table">
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">name</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Nombre único del dispositivo (máx. 100 caracteres).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">descripcion</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Descripción del tipo de dispositivo.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="params-title">Ejemplo de petición</p>
+      <div class="code-block">
+        <div class="code-header"><span>Request Body</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"name"</span><span class="json-punc">:</span>        <span class="json-str">"Monitor"</span><span class="json-punc">,</span>
+  <span class="json-key">"descripcion"</span><span class="json-punc">:</span> <span class="json-str">"Pantalla LED 24 pulgadas"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+
+      <p class="params-title">Respuestas</p>
+      <div class="response-codes">
+        <span class="response-code r201">201 Created</span>
+        <span class="response-code r400">400 Bad Request</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>201 Created</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Registro creado exitosamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET /dispositivos/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/dispositivos/{id}</span>
+      <span class="endpoint-desc">Obtener un dispositivo por ID</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID del dispositivo a consultar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
+    <span class="json-key">"id"</span><span class="json-punc">:</span>          <span class="json-num">1</span><span class="json-punc">,</span>
+    <span class="json-key">"name"</span><span class="json-punc">:</span>        <span class="json-str">"Monitor"</span><span class="json-punc">,</span>
+    <span class="json-key">"descripcion"</span><span class="json-punc">:</span> <span class="json-str">"Pantalla LED 24 pulgadas"</span>
+  <span class="json-punc">}</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUT /dispositivos/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge PUT">PUT</span>
+      <span class="endpoint-path">/api/v1/dispositivos/{id}</span>
+      <span class="endpoint-desc">Actualizar un dispositivo</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>Actualización <strong>completa</strong> del recurso. Se deben enviar todos los campos del modelo.</div>
+      </div>
+      <p class="params-title">Cuerpo de la petición (JSON)</p>
+      <table class="params-table">
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">name</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Nombre único del dispositivo.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">descripcion</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Descripción del tipo de dispositivo.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r400">400 Bad Request</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Registro actualizado exitosamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE /dispositivos/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge DELETE">DELETE</span>
+      <span class="endpoint-path">/api/v1/dispositivos/{id}</span>
+      <span class="endpoint-desc">Eliminar un dispositivo</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>
+          Al eliminar un dispositivo se eliminarán <strong>todos los equipos asociados</strong>
+          (relación <code>CASCADE</code>). Esta acción es irreversible.
+        </div>
+      </div>
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID del dispositivo a eliminar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Registro eliminado exitosamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     EQUIPOS
+     ════════════════════════════════════ -->
+<div class="section" id="equipos">
+  <h2 class="section-title">Equipos</h2>
+  <p class="section-subtitle">Gestión de los equipos físicos del laboratorio, vinculados a un tipo de dispositivo.</p>
+
+  <!-- GET /equipos -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/equipos</span>
+      <span class="endpoint-desc">Listar todos los equipos (paginado)</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de consulta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">page</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Número de página (predeterminado: 1).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">page_size</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Registros por página (predeterminado: 10, máx: 100).</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes"><span class="response-code r200">200 OK</span></div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK — application/json</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"links"</span><span class="json-punc">:</span> <span class="json-punc">{ ... },</span>
+  <span class="json-key">"items"</span><span class="json-punc">:</span>  <span class="json-num">30</span><span class="json-punc">,</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"page"</span><span class="json-punc">:</span>   <span class="json-str">"1/3"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">[</span>
+    <span class="json-punc">{</span>
+      <span class="json-key">"id"</span><span class="json-punc">:</span>              <span class="json-num">1</span><span class="json-punc">,</span>
+      <span class="json-key">"dispositivo"</span><span class="json-punc">:</span>    <span class="json-num">2</span><span class="json-punc">,</span>
+      <span class="json-key">"dispositivo_name"</span><span class="json-punc">:</span> <span class="json-str">"Computadora de Escritorio"</span><span class="json-punc">,</span>
+      <span class="json-key">"marca"</span><span class="json-punc">:</span>          <span class="json-str">"Dell"</span><span class="json-punc">,</span>
+      <span class="json-key">"modelo"</span><span class="json-punc">:</span>         <span class="json-str">"OptiPlex 7090"</span><span class="json-punc">,</span>
+      <span class="json-key">"identificador"</span><span class="json-punc">:</span>  <span class="json-str">"SN-001-DELL"</span><span class="json-punc">,</span>
+      <span class="json-key">"estacion"</span><span class="json-punc">:</span>       <span class="json-num">1</span><span class="json-punc">,</span>
+      <span class="json-key">"descripcion"</span><span class="json-punc">:</span>    <span class="json-null">null</span><span class="json-punc">,</span>
+      <span class="json-key">"date_reg"</span><span class="json-punc">:</span>       <span class="json-str">"2024-03-15"</span>
+    <span class="json-punc">},</span>
+    <span class="json-punc">...</span>
+  <span class="json-punc">]</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST /equipos -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge POST">POST</span>
+      <span class="endpoint-path">/api/v1/equipos</span>
+      <span class="endpoint-desc">Registrar un nuevo equipo</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Cuerpo de la petición (JSON)</p>
+      <table class="params-table">
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">dispositivo</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>ID del dispositivo al que pertenece el equipo.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">marca</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Marca del fabricante.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">modelo</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Modelo del equipo.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">identificador</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Código único de identificación (número de serie, código de inventario, etc.).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">estacion</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Número de estación de trabajo (único).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">descripcion</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Notas adicionales sobre el equipo.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">date_reg</span></td>
+            <td><span class="field-type">string (date)</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>Fecha de ingreso al inventario. Formato: <code>YYYY-MM-DD</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="params-title">Ejemplo de petición</p>
+      <div class="code-block">
+        <div class="code-header"><span>Request Body</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"dispositivo"</span><span class="json-punc">:</span>   <span class="json-num">1</span><span class="json-punc">,</span>
+  <span class="json-key">"marca"</span><span class="json-punc">:</span>         <span class="json-str">"HP"</span><span class="json-punc">,</span>
+  <span class="json-key">"modelo"</span><span class="json-punc">:</span>        <span class="json-str">"ProDesk 400 G7"</span><span class="json-punc">,</span>
+  <span class="json-key">"identificador"</span><span class="json-punc">:</span> <span class="json-str">"INV-2024-015"</span><span class="json-punc">,</span>
+  <span class="json-key">"estacion"</span><span class="json-punc">:</span>      <span class="json-num">15</span><span class="json-punc">,</span>
+  <span class="json-key">"descripcion"</span><span class="json-punc">:</span>   <span class="json-str">"Equipo con SSD 512GB"</span><span class="json-punc">,</span>
+  <span class="json-key">"date_reg"</span><span class="json-punc">:</span>      <span class="json-str">"2024-09-01"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+      <div class="response-codes">
+        <span class="response-code r201">201 Created</span>
+        <span class="response-code r400">400 Bad Request</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>201 Created</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span>   <span class="json-str">"registro creado correctamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET /equipos/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/equipos/{id}</span>
+      <span class="endpoint-desc">Obtener un equipo por ID</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID del equipo a consultar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
+    <span class="json-key">"id"</span><span class="json-punc">:</span>               <span class="json-num">15</span><span class="json-punc">,</span>
+    <span class="json-key">"dispositivo"</span><span class="json-punc">:</span>     <span class="json-num">1</span><span class="json-punc">,</span>
+    <span class="json-key">"dispositivo_name"</span><span class="json-punc">:</span> <span class="json-str">"Computadora de Escritorio"</span><span class="json-punc">,</span>
+    <span class="json-key">"marca"</span><span class="json-punc">:</span>           <span class="json-str">"HP"</span><span class="json-punc">,</span>
+    <span class="json-key">"modelo"</span><span class="json-punc">:</span>          <span class="json-str">"ProDesk 400 G7"</span><span class="json-punc">,</span>
+    <span class="json-key">"identificador"</span><span class="json-punc">:</span>   <span class="json-str">"INV-2024-015"</span><span class="json-punc">,</span>
+    <span class="json-key">"estacion"</span><span class="json-punc">:</span>        <span class="json-num">15</span><span class="json-punc">,</span>
+    <span class="json-key">"descripcion"</span><span class="json-punc">:</span>     <span class="json-str">"Equipo con SSD 512GB"</span><span class="json-punc">,</span>
+    <span class="json-key">"date_reg"</span><span class="json-punc">:</span>        <span class="json-str">"2024-09-01"</span>
+  <span class="json-punc">}</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUT /equipos/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge PUT">PUT</span>
+      <span class="endpoint-path">/api/v1/equipos/{id}</span>
+      <span class="endpoint-desc">Actualizar un equipo</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>Actualización <strong>completa</strong>. Todos los campos requeridos deben incluirse.</div>
+      </div>
+      <p class="params-title">Cuerpo de la petición</p>
+      <p style="font-size:13.5px;color:#64748b;margin-bottom:16px;">Mismos campos que el POST. Ver sección anterior para referencia.</p>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r400">400 Bad Request</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span>   <span class="json-str">"registro actualizado correctamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE /equipos/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge DELETE">DELETE</span>
+      <span class="endpoint-path">/api/v1/equipos/{id}</span>
+      <span class="endpoint-desc">Eliminar un equipo</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID del equipo a eliminar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+        <span class="response-code r404">404 Not Found</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>200 OK</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span>   <span class="json-str">"registro eliminado correctamente"</span>
+<span class="json-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET /equipos/dispositivo/{id} -->
+  <div class="endpoint-block">
+    <div class="endpoint-header">
+      <span class="method-badge GET">GET</span>
+      <span class="endpoint-path">/api/v1/equipos/dispositivo/{dispositivo_id}</span>
+      <span class="endpoint-desc">Listar equipos por tipo de dispositivo</span>
+      <span class="toggle-arrow">▶</span>
+    </div>
+    <div class="endpoint-body">
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div>Filtra los equipos que pertenecen a un tipo de dispositivo específico, ordenados por <code>-id</code>.</div>
+      </div>
+      <p class="params-title">Parámetros de ruta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">dispositivo_id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>ID del dispositivo cuyos equipos se desean consultar.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="params-title">Parámetros de consulta</p>
+      <table class="params-table">
+        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">page</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Número de página.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">page_size</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td>Registros por página (predeterminado: 10).</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="response-codes">
+        <span class="response-code r200">200 OK</span>
+      </div>
+      <p style="font-size:13.5px;color:#64748b;margin-top:8px;">
+        La estructura de la respuesta es la misma que en <code>GET /api/v1/equipos</code>.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

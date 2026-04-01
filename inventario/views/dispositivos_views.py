@@ -87,3 +87,4 @@ class DispositivoDetail(APIView):
                     "message": "Error inesperado"
                     },status=status.HTTP_400_BAD_REQUEST)
         
+

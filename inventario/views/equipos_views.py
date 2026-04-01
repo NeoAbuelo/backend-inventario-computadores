@@ -58,3 +58,12 @@ class EquipoDetailView(APIView):
             return Response({"status": "ok", "data": "registro eliminado correctamente"}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"status": "error", "message": "error inesperado"}, status=status.HTTP_400_BAD_REQUEST)
+        
+class EquipoListByDispositivoView(APIView):
+
+    def get(self, request, dispositivo_id, format=None):
+        equipos = Equipo.objects.filter(dispositivo_id=dispositivo_id).order_by('-id').all()
+        paginator = CustomPagination()
+        page = paginator.paginate_queryset(equipos, request)
+        serializer = EquipoSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
