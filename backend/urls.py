@@ -6,4 +6,6 @@ urlpatterns = [
     path('api/v1/', include('inventario.urls')),
     path('api/v1/', include('salapcs.urls')),
     path('docs/', include('doc.urls')),
+    path('api/v1/', include('dashboard.urls')),    
+    path('api/v1/', include('seguridad.urls')),
 ]

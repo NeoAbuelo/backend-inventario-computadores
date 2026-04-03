@@ -8,19 +8,21 @@ from ..models import Profesor
 from ..serializers import ProfesorSerializer
 from .paginatios import CustomPagination
 
+from seguridad.decorators import logguer_required
+
 # Create your views here.
 class ProfesorList(APIView):
     
+    @logguer_required
     def get(self, request,format=None):
-
         profesores = Profesor.objects.all()
         paginator = CustomPagination()
         result_page = paginator.paginate_queryset(profesores, request)
         serializer = ProfesorSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
     
+    @logguer_required
     def post(self, request, format=None):
-
         serializer = ProfesorSerializer(data=request.data)
         if serializer.is_valid():
             try:
@@ -41,6 +43,7 @@ class ProfesorDetail(APIView):
         except Profesor.DoesNotExist:
             raise Http404
     
+    @logguer_required
     def get(self, request, pk,format=None):
 
         profesor = self.get_object(pk)
@@ -49,8 +52,9 @@ class ProfesorDetail(APIView):
             "status": "ok",
             "data": serializer.data}, status=status.HTTP_200_OK)
 
-    def put(self, request, pk, format=None):
 
+    @logguer_required
+    def put(self, request, pk, format=None):
         profesor = self.get_object(pk)
         serializer = ProfesorSerializer(profesor, data=request.data)
         if serializer.is_valid():
@@ -63,9 +67,10 @@ class ProfesorDetail(APIView):
                         "status": "error",
                         "message": "Error al actualizar el profesor",
                         "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
 
+    @logguer_required
     def delete(self, request, pk, format=None):
-
         profesor = self.get_object(pk)
         try:
             profesor.delete()
