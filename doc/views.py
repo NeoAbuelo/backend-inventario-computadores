@@ -11,3 +11,11 @@ def inventario(request):
 
 def salapcs(request):
     return render(request, 'doc/salapcs.html')
+
+
+def seguridad(request):
+    return render(request, 'doc/seguridad.html')
+
+
+def dashboard(request):
+    return render(request, 'doc/dashboard.html')

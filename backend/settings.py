@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'salapcs',
     'doc',
     'seguridad',
+    'dashboard',
 ]
 
 MIDDLEWARE = [

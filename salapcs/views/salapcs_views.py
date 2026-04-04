@@ -27,7 +27,7 @@ class SalaPCList(APIView):
         if serializer.is_valid():
             try:
                 serializer.save()
-                return Response({"status": "ok", "message": "SalaPC created successfully"}, status=status.HTTP_201_CREATED)
+                return Response({"status": "ok", "message": "Reserva de sala creada exitosamente"}, status=status.HTTP_201_CREATED)
             except Exception as e:
                 return Response({"status": "error", "message": "Error inesperado"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "error", "message": "Error al crear la SalaPC", "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -54,7 +54,7 @@ class SalaPCDetail(APIView):
         if serializer.is_valid():
             try:
                 serializer.save()
-                return Response({"status": "ok", "message": "SalaPC updated successfully"}, status=status.HTTP_200_OK)
+                return Response({"status": "ok", "message": "Reserva de sala actualizada exitosamente"}, status=status.HTTP_200_OK)
             except Exception as e:
                 return Response({"status": "error", "message": "Error inesperado"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "error", "message": "Error al actualizar la SalaPC", "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -65,6 +65,6 @@ class SalaPCDetail(APIView):
         salapc = self.get_object(pk)
         try:
             salapc.delete()
-            return Response({"status": "ok", "message": "SalaPC deleted successfully"}, status=status.HTTP_200_OK)
+            return Response({"status": "ok", "message": "Reserva de sala eliminada correctamente"}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"status": "error", "message": "Error inesperado"}, status=status.HTTP_400_BAD_REQUEST)

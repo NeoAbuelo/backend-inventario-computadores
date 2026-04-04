@@ -18,7 +18,7 @@
   <div class="callout info">
     <span class="callout-icon">ℹ️</span>
     <div>
-      API REST construida con <strong>Django 5</strong> y <strong>Django REST Framework</strong>.
+      API REST construida con <strong>Django 6</strong> y <strong>Django REST Framework</strong>.
       Todas las rutas están bajo el prefijo <code style="font-family:monospace;">/api/v1/</code>.
       Los recursos se entregan en formato <strong>JSON</strong>.
     </div>
@@ -27,15 +27,15 @@
   <!-- Stats -->
   <div class="stats-row">
     <div class="stat-box blue">
-      <div class="stat-num">11</div>
+      <div class="stat-num">25</div>
       <div class="stat-label">Endpoints</div>
     </div>
     <div class="stat-box green">
-      <div class="stat-num">4</div>
+      <div class="stat-num">5</div>
       <div class="stat-label">Modelos</div>
     </div>
     <div class="stat-box" style="min-width:120px;">
-      <div class="stat-num" style="color:#7c3aed;">2</div>
+      <div class="stat-num" style="color:#7c3aed;">4</div>
       <div class="stat-label">Módulos</div>
     </div>
     <div class="stat-box" style="min-width:120px;">
@@ -57,6 +57,18 @@
       <h3>Módulo Sala de PCs</h3>
       <p>Gestión de profesores y reservas de uso de la sala de computación. Controla quién usa el laboratorio, cuándo y con qué curso.</p>
       <a class="card-link" href="{% url 'doc:salapcs' %}">Ver documentación →</a>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">🔐</div>
+      <h3>Módulo Seguridad</h3>
+      <p>Registro de usuarios, autenticación JWT y gestión de perfiles. Controla el acceso a todos los endpoints protegidos de la API.</p>
+      <a class="card-link" href="{% url 'doc:seguridad' %}">Ver documentación →</a>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="background:linear-gradient(135deg,#8b5cf6,#0ea5e9);">📊</div>
+      <h3>Módulo Dashboard</h3>
+      <p>Panel de resumen con totales de equipos y agenda de uso semanal de la sala de PCs. Requiere autenticación.</p>
+      <a class="card-link" href="{% url 'doc:dashboard' %}">Ver documentación →</a>
     </div>
   </div>
 </div>
@@ -184,7 +196,7 @@
       <tr>
         <td><span class="response-code r200">200 OK</span></td>
         <td>Éxito</td>
-        <td>Petición procesada correctamente (GET, PUT).</td>
+        <td>Petición procesada correctamente (GET, PUT, DELETE).</td>
       </tr>
       <tr>
         <td><span class="response-code r201">201 Created</span></td>
@@ -194,7 +206,7 @@
       <tr>
         <td><span class="response-code r204">204 No Content</span></td>
         <td>Sin contenido</td>
-        <td>Recurso eliminado exitosamente (DELETE en algunos endpoints).</td>
+        <td>No utilizado en esta API. Los DELETE devuelven 200 con mensaje.</td>
       </tr>
       <tr>
         <td><span class="response-code r400">400 Bad Request</span></td>
@@ -205,6 +217,11 @@
         <td><span class="response-code r404">404 Not Found</span></td>
         <td>No encontrado</td>
         <td>El recurso solicitado no existe en la base de datos.</td>
+      </tr>
+      <tr>
+        <td><span class="response-code" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">401 Unauthorized</span></td>
+        <td>Sin autorización</td>
+        <td>Token JWT ausente, inválido o expirado.</td>
       </tr>
     </tbody>
   </table>
@@ -222,6 +239,58 @@
 <span class="json-punc">}</span></pre>
     </div>
   </div>
+</div>
+
+<!-- ─── Autenticación ─── -->
+<div class="section" id="autenticacion">
+  <h2 class="section-title">Autenticación</h2>
+  <p class="section-subtitle">La mayoría de los endpoints requieren un token JWT válido.</p>
+
+  <div class="callout warning">
+    <span class="callout-icon">⚠️</span>
+    <div>
+      Los endpoints de <strong>registro</strong> (<code>/api/v1/seguridad/reg</code>) y
+      <strong>login</strong> (<code>/api/v1/seguridad/login</code>) son públicos.
+      Todos los demás requieren el header <code>Authorization</code>.
+    </div>
+  </div>
+
+  <h4 style="font-size:14px;font-weight:700;margin:16px 0 10px;">Header requerido</h4>
+  <div class="code-block">
+    <div class="code-header"><span>HTTP Header</span></div>
+    <div class="code-body">
+      <pre><span class="json-key">Authorization</span><span class="json-punc">:</span> <span class="json-str">Bearer &lt;token&gt;</span></pre>
+    </div>
+  </div>
+
+  <table class="params-table" style="margin-top:16px;">
+    <thead>
+      <tr><th>Escenario</th><th>Código</th><th>Mensaje</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Header ausente</td>
+        <td><span class="response-code" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">401</span></td>
+        <td><code>"Token de autenticación es requerido"</code></td>
+      </tr>
+      <tr>
+        <td>Token inválido / malformado</td>
+        <td><span class="response-code" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">401</span></td>
+        <td><code>"Token de autenticación inválido"</code></td>
+      </tr>
+      <tr>
+        <td>Token expirado</td>
+        <td><span class="response-code" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">401</span></td>
+        <td><code>"Token ha expirado"</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:16px;font-size:13.5px;color:#64748b;">
+    Para obtener un token, utiliza el endpoint
+    <a href="{% url 'doc:seguridad' %}#login" style="color:#0ea5e9;font-weight:600;">POST /api/v1/seguridad/login</a>.
+    El token tiene una validez de <strong>24 horas</strong>.
+  </p>
 </div>
 
 {% endblock %}
