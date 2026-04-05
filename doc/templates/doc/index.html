@@ -79,9 +79,16 @@
   <p class="section-subtitle">Todas las peticiones deben incluir este prefijo.</p>
 
   <div class="code-block">
-    <div class="code-header"><span>URL Base</span></div>
+    <div class="code-header"><span>Producción</span></div>
     <div class="code-body">
-      <pre><span class="json-url">http://&lt;host&gt;/api/v1/</span></pre>
+      <pre><span class="json-url">https://backend-inventario-computadores-production.up.railway.app/api/v1/</span></pre>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span>Desarrollo local</span></div>
+    <div class="code-body">
+      <pre><span class="json-url">http://127.0.0.1:8000/api/v1/</span></pre>
     </div>
   </div>
 
@@ -89,8 +96,8 @@
     <span class="callout-icon">⚠️</span>
     <div>
       En <strong>desarrollo local</strong> el host habitual es <code style="font-family:monospace;">http://127.0.0.1:8000</code>.
-      Configura <code style="font-family:monospace;">ALLOWED_HOSTS</code> en <code style="font-family:monospace;">settings.py</code>
-      antes de desplegar en producción.
+      El servidor de <strong>producción</strong> está desplegado en Railway:
+      <code style="font-family:monospace;">https://backend-inventario-computadores-production.up.railway.app</code>.
     </div>
   </div>
 </div>
