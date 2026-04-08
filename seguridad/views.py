@@ -16,6 +16,8 @@ from django.contrib.auth.models import User
 from .models import Perfil
 from .serializer import PerfilSerializer
 
+from .decorators import logguer_required
+
 load_dotenv()
 
 # Create your views here.
@@ -27,7 +29,8 @@ class CreateUserView(APIView):
         if request.data.get('password')==None or not request.data.get('password'):
             return Response({'error': 'contraseña es requerida'}, status=status.HTTP_400_BAD_REQUEST)
         if request.data.get('email')==None or not request.data.get('email'):
-            return Response({'error': 'correo electrónico es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'correo electrónico es requerido'}, status=status.HTTP_400_BAD_REQUEST),
+        
         
         if User.objects.filter(email=request.data.get('email')).exists():
             return Response({'error': 'correo electrónico ya existe'}, status=status.HTTP_400_BAD_REQUEST)
@@ -41,7 +44,8 @@ class CreateUserView(APIView):
                 )
                 perfil = Perfil.objects.create(
                     user=user,
-                    cargo=request.data.get('cargo', 'Profesor')
+                    cargo=request.data.get('cargo', 'Profesor'),
+                    permissions = request.data.get('permissions', 'profesor')
                 )
                 
                 return Response({'message': 'Usuario creado exitosamente'}, status=status.HTTP_201_CREATED)
@@ -70,14 +74,16 @@ class LogginView(APIView):
                 'user_id': user.id,
                 'ISS': os.getenv('BASE_URL'),
                 'iat': int(time.time()),
-                'exp': feche_unix
+                'exp': feche_unix,
+                'role': user.perfil.permissions
             }
             try:
                 token = jwt.encode(payload, os.getenv('SECRET_KEY'), algorithm='HS512')
                 return Response({
                         'id': user.id, 
                         'username': user.username, 
-                        'token': token}, status=status.HTTP_200_OK)
+                        'token': token,
+                        'role': user.perfil.permissions}, status=status.HTTP_200_OK)
             except Exception as e:
                 return Response({'error': 'Error al generar el token'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
@@ -85,11 +91,11 @@ class LogginView(APIView):
         
 
 class PerfilView(APIView):
-    
-    def get(self, request, id ,format=None):
-        user = request.user
+
+    @logguer_required
+    def get(self, request, format=None):
         try:
-            perfil = Perfil.objects.get(user__id=id)
+            perfil = Perfil.objects.get(user=request.user_id)
             serializer = PerfilSerializer(perfil)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Perfil.DoesNotExist:

@@ -8,7 +8,7 @@ from ..serializers import DispositivoSerializer
 
 from .paginations import CustomPagination
 
-from seguridad.decorators import logguer_required
+from seguridad.decorators import logguer_required, admin_required
 
 class DispositivoList(APIView):
 
@@ -80,8 +80,8 @@ class DispositivoDetail(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
     
 
-    @logguer_required
-    def delete(self, request, pk, format=None):
+    @admin_required
+    def delete(self, request, pk, format=None):                       
         dispositivo = self.get_object(pk)
         try:
             dispositivo.delete()

@@ -12,13 +12,14 @@
 <body>
 
   <!-- ══════════════════ SIDEBAR ══════════════════ -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <a href="{% url 'doc:index' %}">
         <div class="logo-icon">🖥️</div>
         <div class="logo-text">
           <span class="logo-title">InvCompu API</span>
-          <span class="logo-version">v1.0 · REST API</span>
+          <span class="logo-version">v1.0 · Django 6 · REST</span>
         </div>
       </a>
     </div>
@@ -84,13 +85,14 @@
     </nav>
 
     <div class="sidebar-footer">
-      Django REST Framework &nbsp;·&nbsp; API v1
+      Django 6 · DRF · JWT · API v1
     </div>
   </aside>
 
   <!-- ══════════════════ MAIN ══════════════════ -->
   <div class="main-wrapper">
     <header class="top-header">
+      <button class="mobile-menu-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
       <h1>{% block header_title %}Documentación API{% endblock %}</h1>
       <span class="header-badge">
         🌐 Base: <code style="font-family:monospace;font-size:11px;">/api/v1/</code>
@@ -106,21 +108,41 @@
     // Toggle endpoint body
     document.querySelectorAll('.endpoint-header').forEach(function(header) {
       header.addEventListener('click', function() {
-        const body = this.nextElementSibling;
-        const arrow = this.querySelector('.toggle-arrow');
-        const isOpen = body.classList.toggle('open');
+        var body = this.nextElementSibling;
+        var arrow = this.querySelector('.toggle-arrow');
+        var isOpen = body.classList.toggle('open');
         this.classList.toggle('open', isOpen);
         if (arrow) arrow.textContent = isOpen ? '▼' : '▶';
       });
     });
 
     // Mark active sidebar link
-    const currentPath = window.location.pathname;
+    var currentPath = window.location.pathname;
     document.querySelectorAll('.sidebar-nav a').forEach(function(link) {
       if (link.getAttribute('href') === currentPath) {
         link.classList.add('active');
       }
     });
+
+    // Mobile menu toggle
+    var menuBtn = document.getElementById('menuBtn');
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+    }
+
+    if (menuBtn) {
+      menuBtn.addEventListener('click', function() {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+    }
+    if (overlay) {
+      overlay.addEventListener('click', closeSidebar);
+    }
   </script>
 </body>
 </html>

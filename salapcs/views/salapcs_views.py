@@ -8,7 +8,7 @@ from ..models import SalaPC
 from ..serializers import SalaPCSerializer
 from .paginatios import CustomPagination
 
-from seguridad.decorators import logguer_required
+from seguridad.decorators import logguer_required, admin_required
 
     
 class SalaPCList(APIView):
@@ -60,7 +60,7 @@ class SalaPCDetail(APIView):
         return Response({"status": "error", "message": "Error al actualizar la SalaPC", "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 
-    @logguer_required
+    @admin_required
     def delete(self, request, pk, format=None):
         salapc = self.get_object(pk)
         try:

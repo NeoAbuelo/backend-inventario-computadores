@@ -1,6 +1,6 @@
 {% extends "doc/base.html" %}
 {% block title %}Dashboard{% endblock %}
-{% block header_title %}Dashboard{% endblock %}
+{% block header_title %}Módulo Dashboard{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
 
 {% block content %}
@@ -8,100 +8,106 @@
 <div class="section">
   <h1 class="section-title">Dashboard</h1>
   <p class="section-subtitle">
-    Panel de resumen con el total de equipos registrados y la agenda de uso semanal de la sala de PCs.
+    Resumen semanal del sistema — equipos registrados y reservas de la semana actual.
   </p>
 
-  <div class="callout warning">
-    <span class="callout-icon">⚠️</span>
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
     <div>
-      Todos los endpoints de este módulo requieren <strong>autenticación JWT</strong>.
-      Incluye el header <code>Authorization: Bearer &lt;token&gt;</code> en cada petición.
+      El dashboard retorna un resumen para el usuario autenticado que incluye el conteo de equipos
+      y las reservas de sala de la <strong>semana actual</strong> (lunes a domingo).
     </div>
   </div>
 
-  <!-- Stats -->
   <div class="stats-row">
-    <div class="stat-box blue">
+    <div class="stat-box green">
       <div class="stat-num">1</div>
       <div class="stat-label">Endpoint</div>
-    </div>
-    <div class="stat-box green">
-      <div class="stat-num">GET</div>
-      <div class="stat-label">Sólo lectura</div>
     </div>
   </div>
 </div>
 
 <!-- ════════════════════════════════════
-     ENDPOINT DASHBOARD
+     ENDPOINT
      ════════════════════════════════════ -->
-<div class="section" id="dashboard">
-  <h2 class="section-title">Resumen semanal</h2>
+<div class="section" id="endpoint">
+  <h2 class="section-title">Endpoint</h2>
 
   <div class="endpoint-block">
     <div class="endpoint-header">
       <span class="method-badge GET">GET</span>
       <span class="endpoint-path">/api/v1/dashboard/</span>
-      <span class="endpoint-desc">Obtener resumen de equipos y agenda semanal de salas</span>
+      <span class="endpoint-desc">Obtener resumen semanal del sistema</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
-      <div class="callout info">
-        <span class="callout-icon">ℹ️</span>
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
         <div>
-          Devuelve el <strong>total de equipos</strong> registrados en el inventario y las
-          <strong>reservas de sala de la semana actual</strong> (lunes a domingo, en hora local),
-          ordenadas por fecha y hora de inicio.
+          Retorna el ID del usuario autenticado (extraído del token JWT), el número total de equipos
+          en el inventario, la lista de reservas de sala programadas para la semana en curso y el conteo
+          de equipos por tipo de dispositivo.
         </div>
       </div>
 
-      <p class="params-title">Headers requeridos</p>
-      <table class="params-table">
-        <thead><tr><th>Header</th><th>Valor</th><th>Descripción</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="field-name">Authorization</span></td>
-            <td><span class="field-type">Bearer &lt;token&gt;</span></td>
-            <td>Token JWT obtenido en el login.</td>
-          </tr>
-        </tbody>
-      </table>
+      <p class="params-title">Lógica de la semana</p>
+      <div class="callout info">
+        <span class="callout-icon">📅</span>
+        <div>
+          La semana se calcula desde el <strong>lunes</strong> hasta el <strong>domingo</strong> de la semana actual.
+          Solo se incluyen las reservas cuya fecha (<code>date</code>) caiga dentro de ese rango.
+        </div>
+      </div>
 
-      <p class="params-title">Respuesta exitosa</p>
+      <p class="params-title">Respuesta</p>
       <div class="response-codes">
         <span class="response-code r200">200 OK</span>
-        <span class="response-code" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">401 Unauthorized</span>
+        <span class="response-code r401">401 Unauthorized</span>
       </div>
       <div class="code-block">
         <div class="code-header"><span>200 OK — application/json</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"user_id"</span><span class="json-punc">:</span>        <span class="json-num">5</span><span class="json-punc">,</span>
-  <span class="json-key">"numero_equipos"</span><span class="json-punc">:</span> <span class="json-num">42</span><span class="json-punc">,</span>
+  <span class="json-key">"user_id"</span><span class="json-punc">:</span>        <span class="json-num">1</span><span class="json-punc">,</span>
+  <span class="json-key">"numero_equipos"</span><span class="json-punc">:</span> <span class="json-num">30</span><span class="json-punc">,</span>
   <span class="json-key">"salas"</span><span class="json-punc">:</span> <span class="json-punc">[</span>
     <span class="json-punc">{</span>
-      <span class="json-key">"id"</span><span class="json-punc">:</span>             <span class="json-num">7</span><span class="json-punc">,</span>
+      <span class="json-key">"id"</span><span class="json-punc">:</span>            <span class="json-num">5</span><span class="json-punc">,</span>
       <span class="json-key">"profesor"</span><span class="json-punc">:</span>      <span class="json-num">3</span><span class="json-punc">,</span>
-      <span class="json-key">"profesor_name"</span><span class="json-punc">:</span> <span class="json-str">"Ana"</span><span class="json-punc">,</span>
+      <span class="json-key">"profesor_name"</span><span class="json-punc">:</span> <span class="json-str">"Carlos"</span><span class="json-punc">,</span>
       <span class="json-key">"curso"</span><span class="json-punc">:</span>         <span class="json-str">"3°B"</span><span class="json-punc">,</span>
-      <span class="json-key">"asignatura"</span><span class="json-punc">:</span>    <span class="json-str">"Tecnología"</span><span class="json-punc">,</span>
+      <span class="json-key">"asignatura"</span><span class="json-punc">:</span>    <span class="json-str">"Programación I"</span><span class="json-punc">,</span>
       <span class="json-key">"date"</span><span class="json-punc">:</span>          <span class="json-str">"2026-04-06"</span><span class="json-punc">,</span>
-      <span class="json-key">"hour"</span><span class="json-punc">:</span>          <span class="json-str">"09:00:00"</span>
-    <span class="json-punc">},</span>
-    <span class="json-punc">...</span>
-  <span class="json-punc">]</span>
+      <span class="json-key">"hour"</span><span class="json-punc">:</span>          <span class="json-str">"08:00:00"</span>
+    <span class="json-punc">}</span><span class="json-punc">,</span>
+    <span class="json-punc">{</span>
+      <span class="json-key">"id"</span><span class="json-punc">:</span>            <span class="json-num">8</span><span class="json-punc">,</span>
+      <span class="json-key">"profesor"</span><span class="json-punc">:</span>      <span class="json-num">1</span><span class="json-punc">,</span>
+      <span class="json-key">"profesor_name"</span><span class="json-punc">:</span> <span class="json-str">"María"</span><span class="json-punc">,</span>
+      <span class="json-key">"curso"</span><span class="json-punc">:</span>         <span class="json-str">"4°A"</span><span class="json-punc">,</span>
+      <span class="json-key">"asignatura"</span><span class="json-punc">:</span>    <span class="json-str">"Redes"</span><span class="json-punc">,</span>
+      <span class="json-key">"date"</span><span class="json-punc">:</span>          <span class="json-str">"2026-04-08"</span><span class="json-punc">,</span>
+      <span class="json-key">"hour"</span><span class="json-punc">:</span>          <span class="json-str">"14:00:00"</span>
+    <span class="json-punc">}</span>
+  <span class="json-punc">]</span><span class="json-punc">,</span>
+  <span class="json-key">"count_dispositivos"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
+    <span class="json-key">"Computadora de Escritorio"</span><span class="json-punc">:</span> <span class="json-num">15</span><span class="json-punc">,</span>
+    <span class="json-key">"Monitor"</span><span class="json-punc">:</span>                  <span class="json-num">10</span><span class="json-punc">,</span>
+    <span class="json-key">"Teclado"</span><span class="json-punc">:</span>                  <span class="json-num">5</span>
+  <span class="json-punc">}</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
 
-      <p class="params-title" style="margin-top:20px;">Campos de la respuesta</p>
+      <p class="params-title">Campos de la respuesta</p>
       <table class="params-table">
         <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
         <tbody>
           <tr>
             <td><span class="field-name">user_id</span></td>
             <td><span class="field-type">integer</span></td>
-            <td>ID del usuario autenticado que realizó la petición.</td>
+            <td>ID del usuario autenticado (extraído del token JWT).</td>
           </tr>
           <tr>
             <td><span class="field-name">numero_equipos</span></td>
@@ -110,8 +116,13 @@
           </tr>
           <tr>
             <td><span class="field-name">salas</span></td>
-            <td><span class="field-type">array</span></td>
-            <td>Lista de reservas de sala de la semana en curso (lunes–domingo), ordenadas por <code>date</code> y <code>hour</code>. Ver estructura de <a href="{% url 'doc:salapcs' %}#salapcs" style="color:#0ea5e9;font-weight:600;">SalaPC</a>.</td>
+            <td><span class="field-type">array[SalaPC]</span></td>
+            <td>Lista de reservas de sala de la semana actual (lunes a domingo). Cada elemento tiene la misma estructura que el modelo <code>SalaPC</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">count_dispositivos</span></td>
+            <td><span class="field-type">object</span></td>
+            <td>Conteo de equipos agrupados por tipo de dispositivo. Las claves son los nombres de los dispositivos y los valores el número de equipos.</td>
           </tr>
         </tbody>
       </table>

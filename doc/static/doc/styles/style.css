@@ -1,6 +1,5 @@
 /* ======================================================
    InvCompu API — Documentación
-   Estilos profesionales
    ====================================================== */
 
 :root {
@@ -61,6 +60,7 @@ body {
   z-index: 100;
   display: flex;
   flex-direction: column;
+  transition: transform .3s;
 }
 
 .sidebar::-webkit-scrollbar { width: 4px; }
@@ -166,6 +166,28 @@ body {
   color: #475569;
   text-align: center;
 }
+
+/* ── Sidebar overlay (mobile) ── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 99;
+}
+
+/* ── Mobile menu button ── */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: var(--content-text);
+  border-radius: 6px;
+}
+.mobile-menu-btn:hover { background: #f1f5f9; }
 
 /* ── Main layout ── */
 .main-wrapper {
@@ -349,6 +371,21 @@ body {
 
 .endpoint-body.open { display: block; }
 
+/* ── Auth badge ── */
+.auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.auth-badge.login { background: #fef3c7; color: #92400e; }
+.auth-badge.admin { background: #fee2e2; color: #b91c1c; }
+.auth-badge.public { background: #dcfce7; color: #15803d; }
+
 /* ── Params / fields table ── */
 .params-title {
   font-size: 13px;
@@ -472,7 +509,7 @@ body {
   white-space: pre;
 }
 
-/* JSON syntax colors */
+/* JSON syntax */
 .json-key    { color: #93c5fd; }
 .json-str    { color: #86efac; }
 .json-num    { color: #fda4af; }
@@ -501,19 +538,13 @@ body {
   font-family: 'Cascadia Code', 'Fira Code', monospace;
 }
 
-.response-code.r200, .response-code.r201 {
-  background: #dcfce7; color: #15803d;
-}
+.response-code.r200, .response-code.r201 { background: #dcfce7; color: #15803d; }
+.response-code.r400, .response-code.r404 { background: #fee2e2; color: #b91c1c; }
+.response-code.r401 { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.response-code.r403 { background: #fce7f3; color: #9d174d; border: 1px solid #f9a8d4; }
+.response-code.r500 { background: #f1f5f9; color: #475569; }
 
-.response-code.r400, .response-code.r404 {
-  background: #fee2e2; color: #b91c1c;
-}
-
-.response-code.r204 {
-  background: #f0fdf4; color: #16a34a;
-}
-
-/* ── Info callout ── */
+/* ── Callouts ── */
 .callout {
   display: flex;
   gap: 12px;
@@ -613,10 +644,10 @@ body {
   letter-spacing: .06em;
 }
 
-.stat-box.blue  .stat-num { color: #2563eb; }
-.stat-box.green .stat-num { color: #16a34a; }
-.stat-box.purple.stat-num { color: #7c3aed; }
-.stat-box.orange.stat-num { color: #d97706; }
+.stat-box.blue   .stat-num { color: #2563eb; }
+.stat-box.green  .stat-num { color: #16a34a; }
+.stat-box.purple .stat-num { color: #7c3aed; }
+.stat-box.orange .stat-num { color: #d97706; }
 
 /* ── Expand toggle ── */
 .toggle-arrow {
@@ -633,9 +664,13 @@ body {
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); transition: transform .3s; }
+  .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
   .main-wrapper { margin-left: 0; }
   .page-content { padding: 24px 20px; }
   .top-header { padding: 0 20px; }
+  .mobile-menu-btn { display: block; }
+  .endpoint-header { flex-wrap: wrap; }
+  .endpoint-desc { width: 100%; margin-top: 4px; }
 }

@@ -1,6 +1,6 @@
 # 🖥️ InvCompu API
 
-Sistema de **Inventario y Gestión de Sala de Computación** — Backend REST API construida con Django 5 y Django REST Framework.
+Backend REST API para la gestión de inventario de hardware y reservas de sala de computación, construida con **Django 6** y **Django REST Framework 3.16**.
 
 ---
 
@@ -8,39 +8,61 @@ Sistema de **Inventario y Gestión de Sala de Computación** — Backend REST AP
 
 - [Descripción](#descripción)
 - [Tecnologías](#tecnologías)
+- [Estructura del proyecto](#estructura-del-proyecto)
 - [Instalación](#instalación)
 - [Variables de entorno](#variables-de-entorno)
-- [Base URL y estructura de respuesta](#base-url-y-estructura-de-respuesta)
+- [Base URL](#base-url)
+- [Autenticación](#autenticación)
 - [Paginación](#paginación)
 - [Códigos de respuesta](#códigos-de-respuesta)
-- [Módulo Inventario](#módulo-inventario)
-  - [Dispositivos](#dispositivos)
-  - [Equipos](#equipos)
-- [Módulo Sala de PCs](#módulo-sala-de-pcs)
-  - [Profesores](#profesores)
-  - [Reservas de Sala (SalaPC)](#reservas-de-sala-salapc)
+- [Endpoints](#endpoints)
 - [Documentación web](#documentación-web)
 
 ---
 
 ## Descripción
 
-**InvCompu API** es el backend de una aplicación para gestionar el inventario de hardware y el uso de un laboratorio de computación. Expone dos módulos principales:
+**InvCompu API** es el backend de una aplicación de gestión para laboratorios de computación. Expone **25 endpoints** organizados en 4 módulos:
 
-| Módulo | Descripción |
-|--------|-------------|
-| `inventario` | Gestión de tipos de dispositivos y equipos físicos del laboratorio. |
-| `salapcs` | Gestión de profesores y reservas de uso de la sala. |
+| Módulo | Descripción | Endpoints |
+|--------|-------------|-----------|
+| `inventario` | Tipos de dispositivos y equipos físicos del laboratorio | 11 |
+| `salapcs` | Profesores y reservas de uso de sala | 10 |
+| `seguridad` | Registro, login y perfil de usuario con JWT | 3 |
+| `dashboard` | Resumen semanal (equipos + reservas de la semana) | 1 |
 
 ---
 
 ## Tecnologías
 
-- Python 3.x
-- Django 5
-- Django REST Framework
-- SQLite (desarrollo)
-- python-dotenv
+| Componente | Tecnología |
+|------------|-----------|
+| Lenguaje | Python 3.13 |
+| Framework | Django 6.0.3 |
+| API | Django REST Framework 3.16.1 |
+| Autenticación | JWT (python-jose, HS512, 24h) |
+| Base de datos | SQLite (dev) / PostgreSQL (prod vía dj-database-url) |
+| Archivos estáticos | WhiteNoise |
+| CORS | django-cors-headers |
+| Servidor producción | Gunicorn |
+
+---
+
+## Estructura del proyecto
+
+```
+backend/
+├── backend/          # Configuración Django (settings, urls, wsgi)
+├── inventario/       # App: Dispositivos + Equipos
+├── salapcs/          # App: Profesores + Reservas de Sala
+├── seguridad/        # App: Auth JWT (registro, login, perfil)
+├── dashboard/        # App: Resumen semanal
+├── doc/              # App: Documentación web interactiva
+├── manage.py
+├── requirements.txt
+├── Procfile          # Gunicorn (producción)
+└── runtime.txt       # Python 3.13
+```
 
 ---
 
@@ -59,8 +81,8 @@ source .venv/bin/activate     # Linux / macOS
 # 3. Instalar dependencias
 pip install -r requirements.txt
 
-# 4. Configurar variables de entorno (ver sección siguiente)
-cp .env.example .env
+# 4. Configurar variables de entorno
+cp .env.example .env          # editar con tus valores
 
 # 5. Aplicar migraciones
 python manage.py migrate
@@ -73,16 +95,21 @@ python manage.py runserver
 
 ## Variables de entorno
 
-Crea un archivo `.env` en la raíz del proyecto con las siguientes claves:
+Crea un archivo `.env` en la raíz del proyecto:
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `SECRET_KEY` | Clave secreta de Django | `django-insecure-...` |
+| `SECRET_KEY` | Clave secreta de Django (usada también para firmar JWT) | `django-insecure-xxxxxx` |
 | `DEBUG` | Modo de depuración | `True` |
+| `DATABASE_URL` | URL de conexión PostgreSQL (si no se define, usa SQLite) | `postgres://user:pass@host/db` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes CORS permitidos (separados por coma) | `http://localhost:5173` |
+| `CSRF_TRUSTED_ORIGINS` | Orígenes de confianza para CSRF | `http://localhost:5173` |
+| `ALLOWED_HOSTS` | Hosts permitidos (separados por coma) | `localhost,127.0.0.1` |
+| `BASE_URL` | URL base del servidor (para links de paginación) | `http://127.0.0.1:8000` |
 
 ---
 
-## Base URL y estructura de respuesta
+## Base URL
 
 Todas las rutas de la API están bajo el prefijo:
 
@@ -94,9 +121,131 @@ En desarrollo local: `http://127.0.0.1:8000/api/v1/`
 
 ---
 
+## Autenticación
+
+La API usa **JWT** (JSON Web Tokens) con el algoritmo **HS512**.
+
+1. **Obtener token:** `POST /api/v1/seguridad/login` con `username` y `password`.
+2. **Usar token:** Incluir en el header `Authorization` de cada petición protegida.
+
+```
+Authorization: eyJhbGciOiJIUzUxMiIs...
+```
+
+> **Nota:** El token se envía directamente, **sin** el prefijo `Bearer`.
+
+**Roles:**
+
+| Rol | Permisos |
+|-----|----------|
+| `profesor` | GET, POST, PUT en todos los módulos |
+| `admin` | Todo lo anterior + DELETE |
+
+---
+
 ## Paginación
 
-Todos los listados devuelven resultados paginados. La estructura de respuesta es:
+Los listados devuelven resultados paginados con la siguiente estructura:
+
+```json
+{
+  "links": { "next": "...?page=2", "previous": null },
+  "items": 25,
+  "status": "ok",
+  "page": "1/3",
+  "data": [ ... ]
+}
+```
+
+| Módulo | Parámetro de tamaño | Predeterminado | Máximo |
+|--------|---------------------|----------------|--------|
+| `inventario` | `page_size` | 10 | 100 |
+| `salapcs` | `Limit` | 20 | — |
+
+---
+
+## Códigos de respuesta
+
+| Código | Significado |
+|--------|-------------|
+| `200` | Operación exitosa |
+| `201` | Recurso creado exitosamente |
+| `400` | Datos inválidos o incompletos |
+| `401` | Token faltante, expirado o inválido |
+| `403` | Permisos insuficientes (requiere admin) |
+| `404` | Recurso no encontrado |
+| `500` | Error interno del servidor |
+
+---
+
+## Endpoints
+
+### Inventario — Dispositivos
+
+| Método | Ruta | Descripción | Acceso |
+|--------|------|-------------|--------|
+| `GET` | `/api/v1/dispositivos` | Listar dispositivos (paginado) | 🔒 login |
+| `POST` | `/api/v1/dispositivos` | Crear dispositivo | 🔒 login |
+| `GET` | `/api/v1/dispositivos/{id}` | Obtener dispositivo por ID | 🔒 login |
+| `PUT` | `/api/v1/dispositivos/{id}` | Actualizar dispositivo | 🔒 login |
+| `DELETE` | `/api/v1/dispositivos/{id}` | Eliminar dispositivo | 🛡️ admin |
+
+### Inventario — Equipos
+
+| Método | Ruta | Descripción | Acceso |
+|--------|------|-------------|--------|
+| `GET` | `/api/v1/equipos` | Listar equipos (paginado) | 🔒 login |
+| `POST` | `/api/v1/equipos` | Registrar equipo | 🔒 login |
+| `GET` | `/api/v1/equipos/{id}` | Obtener equipo por ID | 🔒 login |
+| `PUT` | `/api/v1/equipos/{id}` | Actualizar equipo | 🔒 login |
+| `DELETE` | `/api/v1/equipos/{id}` | Eliminar equipo | 🛡️ admin |
+| `GET` | `/api/v1/equipos/dispositivo/{id}` | Equipos por tipo de dispositivo | 🔒 login |
+
+### Sala de PCs — Profesores
+
+| Método | Ruta | Descripción | Acceso |
+|--------|------|-------------|--------|
+| `GET` | `/api/v1/profesores` | Listar profesores (paginado) | 🔒 login |
+| `POST` | `/api/v1/profesores` | Registrar profesor | 🔒 login |
+| `GET` | `/api/v1/profesores/{id}` | Obtener profesor por ID | 🔒 login |
+| `PUT` | `/api/v1/profesores/{id}` | Actualizar profesor | 🔒 login |
+| `DELETE` | `/api/v1/profesores/{id}` | Eliminar profesor | 🛡️ admin |
+
+### Sala de PCs — Reservas
+
+| Método | Ruta | Descripción | Acceso |
+|--------|------|-------------|--------|
+| `GET` | `/api/v1/salapcs` | Listar reservas (paginado) | 🔒 login |
+| `POST` | `/api/v1/salapcs` | Crear reserva | 🔒 login |
+| `GET` | `/api/v1/salapcs/{id}` | Obtener reserva por ID | 🔒 login |
+| `PUT` | `/api/v1/salapcs/{id}` | Actualizar reserva | 🔒 login |
+| `DELETE` | `/api/v1/salapcs/{id}` | Eliminar reserva | 🛡️ admin |
+
+### Seguridad
+
+| Método | Ruta | Descripción | Acceso |
+|--------|------|-------------|--------|
+| `POST` | `/api/v1/seguridad/registro` | Registrar usuario | 🌐 público |
+| `POST` | `/api/v1/seguridad/login` | Iniciar sesión (obtener JWT) | 🌐 público |
+| `GET` | `/api/v1/seguridad/perfil` | Perfil del usuario autenticado | 🔒 login |
+
+### Dashboard
+
+| Método | Ruta | Descripción | Acceso |
+|--------|------|-------------|--------|
+| `GET` | `/api/v1/dashboard/` | Resumen semanal del sistema | 🔒 login |
+
+---
+
+## Documentación web
+
+La API incluye una documentación web interactiva accesible en:
+
+```
+http://<host>/doc/
+```
+
+Incluye documentación detallada de cada endpoint con modelos de datos, ejemplos de petición/respuesta y códigos de error.
 
 ```json
 {
@@ -168,6 +317,7 @@ Todos los listados devuelven resultados paginados. La estructura de respuesta es
 | `estacion` | integer | requerido, único | Número de estación de trabajo. |
 | `descripcion` | text | opcional | Notas adicionales. |
 | `date_reg` | date | requerido | Fecha de ingreso. Formato: `YYYY-MM-DD`. |
+| `is_active` | boolean | opcional | Indica si el equipo está activo. Predeterminado: `true`. |
 
 ---
 
@@ -252,7 +402,8 @@ Lista todos los equipos, paginado.
   "identificador": "SN-001-DELL",
   "estacion": 1,
   "descripcion": null,
-  "date_reg": "2024-03-15"
+  "date_reg": "2024-03-15",
+  "is_active": true
 }
 ```
 
@@ -459,12 +610,20 @@ Elimina una reserva de sala.
 
 La API incluye una interfaz de documentación HTML accesible en:
 
+**Producción:**
+```
+https://backend-inventario-computadores-production.up.railway.app/docs/
+```
+
+**Desarrollo local:**
 ```
 http://127.0.0.1:8000/docs/
 ```
 
 | Ruta | Contenido |
-|------|-----------|
+|------|----------|
 | `/docs/` | Página principal: overview, paginación y códigos HTTP |
 | `/docs/inventario/` | Documentación del módulo Inventario |
 | `/docs/salapcs/` | Documentación del módulo Sala de PCs |
+| `/docs/seguridad/` | Documentación del módulo Seguridad |
+| `/docs/dashboard/` | Documentación del módulo Dashboard |

@@ -19,7 +19,6 @@
     </div>
   </div>
 
-  <!-- Stats -->
   <div class="stats-row">
     <div class="stat-box blue">
       <div class="stat-num">5</div>
@@ -95,7 +94,13 @@
             <td><span class="field-name">dispositivo</span></td>
             <td><span class="field-type">FK → Dispositivo</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>ID del dispositivo al que pertenece este equipo. Se elimina en cascada.</td>
+            <td>ID del dispositivo al que pertenece. Se elimina en cascada.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">dispositivo_name</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-readonly">solo lectura</span></td>
+            <td>Nombre del dispositivo asociado (campo virtual del serializer).</td>
           </tr>
           <tr>
             <td><span class="field-name">marca</span></td>
@@ -119,7 +124,7 @@
             <td><span class="field-name">estacion</span></td>
             <td><span class="field-type">integer</span></td>
             <td><span class="badge-required">requerido</span>&nbsp;<span class="badge-readonly">único</span></td>
-            <td>Número de estación de trabajo a la que está asignado el equipo.</td>
+            <td>Número de estación de trabajo asignada.</td>
           </tr>
           <tr>
             <td><span class="field-name">descripcion</span></td>
@@ -131,7 +136,13 @@
             <td><span class="field-name">date_reg</span></td>
             <td><span class="field-type">date</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Fecha de registro/ingreso del equipo al inventario. Formato: <code>YYYY-MM-DD</code>.</td>
+            <td>Fecha de ingreso al inventario. Formato: <code>YYYY-MM-DD</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">is_active</span></td>
+            <td><span class="field-type">boolean</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Indica si el equipo está activo. Predeterminado: <code>true</code>.</td>
           </tr>
         </tbody>
       </table>
@@ -152,6 +163,7 @@
       <span class="method-badge GET">GET</span>
       <span class="endpoint-path">/api/v1/dispositivos</span>
       <span class="endpoint-desc">Listar todos los dispositivos (paginado)</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
@@ -178,9 +190,7 @@
       </table>
 
       <p class="params-title">Respuesta exitosa</p>
-      <div class="response-codes">
-        <span class="response-code r200">200 OK</span>
-      </div>
+      <div class="response-codes"><span class="response-code r200">200 OK</span></div>
       <div class="code-block">
         <div class="code-header"><span>200 OK — application/json</span></div>
         <div class="code-body">
@@ -197,8 +207,7 @@
       <span class="json-key">"id"</span><span class="json-punc">:</span>          <span class="json-num">3</span><span class="json-punc">,</span>
       <span class="json-key">"name"</span><span class="json-punc">:</span>        <span class="json-str">"Computadora de Escritorio"</span><span class="json-punc">,</span>
       <span class="json-key">"descripcion"</span><span class="json-punc">:</span> <span class="json-str">"PC de escritorio con torre ATX"</span>
-    <span class="json-punc">},</span>
-    <span class="json-punc">...</span>
+    <span class="json-punc">}</span>
   <span class="json-punc">]</span>
 <span class="json-punc">}</span></pre>
         </div>
@@ -212,6 +221,7 @@
       <span class="method-badge POST">POST</span>
       <span class="endpoint-path">/api/v1/dispositivos</span>
       <span class="endpoint-desc">Crear un nuevo dispositivo</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
@@ -268,6 +278,7 @@
       <span class="method-badge GET">GET</span>
       <span class="endpoint-path">/api/v1/dispositivos/{id}</span>
       <span class="endpoint-desc">Obtener un dispositivo por ID</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
@@ -308,12 +319,13 @@
       <span class="method-badge PUT">PUT</span>
       <span class="endpoint-path">/api/v1/dispositivos/{id}</span>
       <span class="endpoint-desc">Actualizar un dispositivo</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
       <div class="callout warning">
         <span class="callout-icon">⚠️</span>
-        <div>Actualización <strong>completa</strong> del recurso. Se deben enviar todos los campos del modelo.</div>
+        <div>Actualización <strong>completa</strong> del recurso. Se deben enviar todos los campos requeridos.</div>
       </div>
       <p class="params-title">Cuerpo de la petición (JSON)</p>
       <table class="params-table">
@@ -356,29 +368,20 @@
       <span class="method-badge DELETE">DELETE</span>
       <span class="endpoint-path">/api/v1/dispositivos/{id}</span>
       <span class="endpoint-desc">Eliminar un dispositivo</span>
+      <span class="auth-badge admin">🛡️ admin</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
       <div class="callout warning">
         <span class="callout-icon">⚠️</span>
         <div>
-          Al eliminar un dispositivo se eliminarán <strong>todos los equipos asociados</strong>
-          (relación <code>CASCADE</code>). Esta acción es irreversible.
+          Requiere rol <strong>admin</strong>. Al eliminar un dispositivo se eliminarán
+          <strong>todos los equipos asociados</strong> (relación <code>CASCADE</code>).
         </div>
       </div>
-      <p class="params-title">Parámetros de ruta</p>
-      <table class="params-table">
-        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="field-name">id</span></td>
-            <td><span class="field-type">integer</span></td>
-            <td>ID del dispositivo a eliminar.</td>
-          </tr>
-        </tbody>
-      </table>
       <div class="response-codes">
         <span class="response-code r200">200 OK</span>
+        <span class="response-code r403">403 Forbidden</span>
         <span class="response-code r404">404 Not Found</span>
       </div>
       <div class="code-block">
@@ -407,6 +410,7 @@
       <span class="method-badge GET">GET</span>
       <span class="endpoint-path">/api/v1/equipos</span>
       <span class="endpoint-desc">Listar todos los equipos (paginado)</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
@@ -437,17 +441,16 @@
   <span class="json-key">"page"</span><span class="json-punc">:</span>   <span class="json-str">"1/3"</span><span class="json-punc">,</span>
   <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">[</span>
     <span class="json-punc">{</span>
-      <span class="json-key">"id"</span><span class="json-punc">:</span>              <span class="json-num">1</span><span class="json-punc">,</span>
-      <span class="json-key">"dispositivo"</span><span class="json-punc">:</span>    <span class="json-num">2</span><span class="json-punc">,</span>
+      <span class="json-key">"id"</span><span class="json-punc">:</span>               <span class="json-num">1</span><span class="json-punc">,</span>
+      <span class="json-key">"dispositivo"</span><span class="json-punc">:</span>     <span class="json-num">2</span><span class="json-punc">,</span>
       <span class="json-key">"dispositivo_name"</span><span class="json-punc">:</span> <span class="json-str">"Computadora de Escritorio"</span><span class="json-punc">,</span>
-      <span class="json-key">"marca"</span><span class="json-punc">:</span>          <span class="json-str">"Dell"</span><span class="json-punc">,</span>
-      <span class="json-key">"modelo"</span><span class="json-punc">:</span>         <span class="json-str">"OptiPlex 7090"</span><span class="json-punc">,</span>
-      <span class="json-key">"identificador"</span><span class="json-punc">:</span>  <span class="json-str">"SN-001-DELL"</span><span class="json-punc">,</span>
-      <span class="json-key">"estacion"</span><span class="json-punc">:</span>       <span class="json-num">1</span><span class="json-punc">,</span>
-      <span class="json-key">"descripcion"</span><span class="json-punc">:</span>    <span class="json-null">null</span><span class="json-punc">,</span>
-      <span class="json-key">"date_reg"</span><span class="json-punc">:</span>       <span class="json-str">"2024-03-15"</span>
-    <span class="json-punc">},</span>
-    <span class="json-punc">...</span>
+      <span class="json-key">"marca"</span><span class="json-punc">:</span>           <span class="json-str">"Dell"</span><span class="json-punc">,</span>
+      <span class="json-key">"modelo"</span><span class="json-punc">:</span>          <span class="json-str">"OptiPlex 7090"</span><span class="json-punc">,</span>
+      <span class="json-key">"identificador"</span><span class="json-punc">:</span>   <span class="json-str">"SN-001-DELL"</span><span class="json-punc">,</span>
+      <span class="json-key">"estacion"</span><span class="json-punc">:</span>        <span class="json-num">1</span><span class="json-punc">,</span>
+      <span class="json-key">"descripcion"</span><span class="json-punc">:</span>     <span class="json-null">null</span><span class="json-punc">,</span>
+      <span class="json-key">"date_reg"</span><span class="json-punc">:</span>        <span class="json-str">"2024-03-15"</span>
+    <span class="json-punc">}</span>
   <span class="json-punc">]</span>
 <span class="json-punc">}</span></pre>
         </div>
@@ -461,6 +464,7 @@
       <span class="method-badge POST">POST</span>
       <span class="endpoint-path">/api/v1/equipos</span>
       <span class="endpoint-desc">Registrar un nuevo equipo</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
@@ -490,7 +494,7 @@
             <td><span class="field-name">identificador</span></td>
             <td><span class="field-type">string</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Código único de identificación (número de serie, código de inventario, etc.).</td>
+            <td>Código único de identificación (número de serie, etc.).</td>
           </tr>
           <tr>
             <td><span class="field-name">estacion</span></td>
@@ -512,6 +516,7 @@
           </tr>
         </tbody>
       </table>
+
       <p class="params-title">Ejemplo de petición</p>
       <div class="code-block">
         <div class="code-header"><span>Request Body</span></div>
@@ -527,6 +532,7 @@
 <span class="json-punc">}</span></pre>
         </div>
       </div>
+
       <div class="response-codes">
         <span class="response-code r201">201 Created</span>
         <span class="response-code r400">400 Bad Request</span>
@@ -549,20 +555,10 @@
       <span class="method-badge GET">GET</span>
       <span class="endpoint-path">/api/v1/equipos/{id}</span>
       <span class="endpoint-desc">Obtener un equipo por ID</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
-      <p class="params-title">Parámetros de ruta</p>
-      <table class="params-table">
-        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="field-name">id</span></td>
-            <td><span class="field-type">integer</span></td>
-            <td>ID del equipo a consultar.</td>
-          </tr>
-        </tbody>
-      </table>
       <div class="response-codes">
         <span class="response-code r200">200 OK</span>
         <span class="response-code r404">404 Not Found</span>
@@ -595,6 +591,7 @@
       <span class="method-badge PUT">PUT</span>
       <span class="endpoint-path">/api/v1/equipos/{id}</span>
       <span class="endpoint-desc">Actualizar un equipo</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
@@ -602,21 +599,11 @@
         <span class="callout-icon">⚠️</span>
         <div>Actualización <strong>completa</strong>. Todos los campos requeridos deben incluirse.</div>
       </div>
-      <p class="params-title">Cuerpo de la petición</p>
       <p style="font-size:13.5px;color:#64748b;margin-bottom:16px;">Mismos campos que el POST. Ver sección anterior para referencia.</p>
       <div class="response-codes">
         <span class="response-code r200">200 OK</span>
         <span class="response-code r400">400 Bad Request</span>
         <span class="response-code r404">404 Not Found</span>
-      </div>
-      <div class="code-block">
-        <div class="code-header"><span>200 OK</span></div>
-        <div class="code-body">
-          <pre><span class="json-punc">{</span>
-  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
-  <span class="json-key">"data"</span><span class="json-punc">:</span>   <span class="json-str">"registro actualizado correctamente"</span>
-<span class="json-punc">}</span></pre>
-        </div>
       </div>
     </div>
   </div>
@@ -627,22 +614,17 @@
       <span class="method-badge DELETE">DELETE</span>
       <span class="endpoint-path">/api/v1/equipos/{id}</span>
       <span class="endpoint-desc">Eliminar un equipo</span>
+      <span class="auth-badge admin">🛡️ admin</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
-      <p class="params-title">Parámetros de ruta</p>
-      <table class="params-table">
-        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="field-name">id</span></td>
-            <td><span class="field-type">integer</span></td>
-            <td>ID del equipo a eliminar.</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>Requiere rol <strong>admin</strong>. Esta acción es irreversible.</div>
+      </div>
       <div class="response-codes">
         <span class="response-code r200">200 OK</span>
+        <span class="response-code r403">403 Forbidden</span>
         <span class="response-code r404">404 Not Found</span>
       </div>
       <div class="code-block">
@@ -663,6 +645,7 @@
       <span class="method-badge GET">GET</span>
       <span class="endpoint-path">/api/v1/equipos/dispositivo/{dispositivo_id}</span>
       <span class="endpoint-desc">Listar equipos por tipo de dispositivo</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
@@ -681,25 +664,7 @@
           </tr>
         </tbody>
       </table>
-      <p class="params-title">Parámetros de consulta</p>
-      <table class="params-table">
-        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="field-name">page</span></td>
-            <td><span class="field-type">integer</span></td>
-            <td>Número de página.</td>
-          </tr>
-          <tr>
-            <td><span class="field-name">page_size</span></td>
-            <td><span class="field-type">integer</span></td>
-            <td>Registros por página (predeterminado: 10).</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="response-codes">
-        <span class="response-code r200">200 OK</span>
-      </div>
+      <div class="response-codes"><span class="response-code r200">200 OK</span></div>
       <p style="font-size:13.5px;color:#64748b;margin-top:8px;">
         La estructura de la respuesta es la misma que en <code>GET /api/v1/equipos</code>.
       </p>

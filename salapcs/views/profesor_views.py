@@ -8,7 +8,7 @@ from ..models import Profesor
 from ..serializers import ProfesorSerializer
 from .paginatios import CustomPagination
 
-from seguridad.decorators import logguer_required
+from seguridad.decorators import logguer_required, admin_required
 
 # Create your views here.
 class ProfesorList(APIView):
@@ -69,7 +69,7 @@ class ProfesorDetail(APIView):
                         "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 
-    @logguer_required
+    @admin_required
     def delete(self, request, pk, format=None):
         profesor = self.get_object(pk)
         try:

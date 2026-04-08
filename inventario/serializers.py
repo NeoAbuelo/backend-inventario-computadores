@@ -10,4 +10,4 @@ class EquipoSerializer(serializers.ModelSerializer):
     dispositivo_name = serializers.ReadOnlyField(source= 'dispositivo.name')
     class Meta:
         model = Equipo
-        fields = ['id', 'dispositivo' ,'dispositivo_name', 'marca', 'modelo', 'identificador', 'estacion', 'descripcion', 'date_reg']
+        fields = ['id', 'dispositivo' ,'dispositivo_name', 'marca', 'modelo', 'identificador', 'estacion', 'descripcion', 'date_reg', 'is_active']

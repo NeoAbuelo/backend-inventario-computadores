@@ -19,6 +19,7 @@ class Equipo(models.Model):
     modelo = models.CharField("Modelo",blank=True,null=True, max_length=100)
     identificador = models.CharField("identificador",unique=True, max_length=100)
     estacion = models.IntegerField("Estacion de trabajo",unique=True)
+    is_active = models.BooleanField("Activo", default=True)
     descripcion = models.TextField("Descripcion",null=True, blank=True)
     date_reg = models.DateField("Fecha de ingreso")
 

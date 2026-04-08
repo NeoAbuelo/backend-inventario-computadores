@@ -9,7 +9,7 @@ from ..serializers import EquipoSerializer
 
 from .paginations import CustomPagination
 
-from seguridad.decorators import logguer_required
+from seguridad.decorators import logguer_required, admin_required
 
 class EquipoListCreateView(APIView):
 
@@ -58,7 +58,7 @@ class EquipoDetailView(APIView):
                 return Response({"status": "error", "message": "error inesperado"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "error", "message": "error de validación", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
-    @logguer_required
+    @admin_required
     def delete(self, request, pk, format=None):
         equipo = self.get_object(pk)
         try:

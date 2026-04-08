@@ -8,28 +8,26 @@
 <div class="section">
   <h1 class="section-title">Seguridad</h1>
   <p class="section-subtitle">
-    Registro de usuarios, autenticación con <strong>JWT</strong> y gestión de perfiles.
+    Autenticación con <strong>JWT</strong> (JSON Web Tokens) — registro de usuarios, inicio de sesión y gestión de perfiles.
   </p>
 
   <div class="callout info">
     <span class="callout-icon">ℹ️</span>
     <div>
-      Los endpoints de registro y login son <strong>públicos</strong>.
-      El token obtenido al hacer login debe enviarse en el header
-      <code>Authorization: Bearer &lt;token&gt;</code> en todas las peticiones protegidas.
-      El token expira en <strong>24 horas</strong>.
+      La autenticación usa el algoritmo <strong>HS512</strong> con la librería <code>python-jose</code>.
+      Los tokens tienen una expiración de <strong>24 horas</strong> y deben enviarse en el header
+      <code>Authorization</code> de cada petición protegida.
     </div>
   </div>
 
-  <!-- Stats -->
   <div class="stats-row">
-    <div class="stat-box blue">
+    <div class="stat-box red">
       <div class="stat-num">3</div>
       <div class="stat-label">Endpoints</div>
     </div>
-    <div class="stat-box green">
-      <div class="stat-num">1</div>
-      <div class="stat-label">Modelo</div>
+    <div class="stat-box blue">
+      <div class="stat-num">2</div>
+      <div class="stat-label">Roles (admin / profesor)</div>
     </div>
   </div>
 </div>
@@ -38,30 +36,52 @@
      MODELO
      ════════════════════════════════════ -->
 <div class="section">
-  <h2 class="section-title">Modelos de Datos</h2>
+  <h2 class="section-title">Modelo de Datos</h2>
 
   <div class="model-block">
     <div class="model-header">
       <h4>Perfil</h4>
-      <span class="db-table">extiende: auth.User</span>
+      <span class="db-table">tabla: perfil (extiende auth_user)</span>
     </div>
     <div class="model-body">
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div>
+          El modelo <code>Perfil</code> extiende el modelo <code>User</code> de Django con un
+          <code>OneToOneField</code>. Al crearse un usuario se crea automáticamente su perfil asociado.
+        </div>
+      </div>
       <table class="params-table">
-        <thead>
-          <tr><th>Campo</th><th>Tipo</th><th>Constraint</th><th>Descripción</th></tr>
-        </thead>
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Constraint</th><th>Descripción</th></tr></thead>
         <tbody>
+          <tr>
+            <td><span class="field-name">id</span></td>
+            <td><span class="field-type">integer</span></td>
+            <td><span class="badge-readonly">auto</span></td>
+            <td>Clave primaria autoincremental.</td>
+          </tr>
           <tr>
             <td><span class="field-name">user</span></td>
             <td><span class="field-type">OneToOne → User</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Relación uno a uno con el usuario de Django. Se elimina en cascada.</td>
+            <td>Relación uno-a-uno con el usuario de Django. Se elimina en cascada.</td>
           </tr>
           <tr>
             <td><span class="field-name">cargo</span></td>
             <td><span class="field-type">string(255)</span></td>
             <td><span class="badge-optional">opcional</span></td>
-            <td>Cargo o rol del usuario (predeterminado: <code>"Profesor"</code>).</td>
+            <td>Cargo o puesto del usuario en la institución. Predeterminado: <code>""</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">permissions</span></td>
+            <td><span class="field-type">string(255)</span></td>
+            <td><span class="badge-required">requerido</span></td>
+            <td>
+              Nivel de permisos del usuario. Valores posibles:
+              <code>admin</code> (acceso total, puede eliminar registros) o
+              <code>profesor</code> (CRUD sin eliminación).
+              Predeterminado: <code>"profesor"</code>.
+            </td>
           </tr>
         </tbody>
       </table>
@@ -72,22 +92,25 @@
 <!-- ════════════════════════════════════
      ENDPOINTS
      ════════════════════════════════════ -->
+<div class="section" id="endpoints">
+  <h2 class="section-title">Endpoints</h2>
 
-<!-- ─── Registro ─── -->
-<div class="section" id="registro">
-  <h2 class="section-title">Registro</h2>
-
+  <!-- POST /seguridad/registro -->
   <div class="endpoint-block">
     <div class="endpoint-header">
       <span class="method-badge POST">POST</span>
-      <span class="endpoint-path">/api/v1/seguridad/reg</span>
+      <span class="endpoint-path">/api/v1/seguridad/registro</span>
       <span class="endpoint-desc">Registrar un nuevo usuario</span>
+      <span class="auth-badge public">🌐 público</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
       <div class="callout success">
         <span class="callout-icon">✅</span>
-        <div>Endpoint <strong>público</strong>. No requiere autenticación. Crea el usuario y su perfil de forma atómica.</div>
+        <div>
+          Crea un nuevo usuario en el sistema junto con su perfil asociado.
+          El campo <code>permissions</code> determina el nivel de acceso del usuario.
+        </div>
       </div>
 
       <p class="params-title">Cuerpo de la petición (JSON)</p>
@@ -98,25 +121,31 @@
             <td><span class="field-name">username</span></td>
             <td><span class="field-type">string</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Nombre de usuario único.</td>
+            <td>Nombre de usuario único para el login.</td>
           </tr>
           <tr>
             <td><span class="field-name">email</span></td>
             <td><span class="field-type">string (email)</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Correo electrónico único. No puede repetirse en el sistema.</td>
+            <td>Correo electrónico del usuario.</td>
           </tr>
           <tr>
             <td><span class="field-name">password</span></td>
             <td><span class="field-type">string</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Contraseña del usuario.</td>
+            <td>Contraseña del usuario (se almacena hasheada con <code>make_password</code>).</td>
           </tr>
           <tr>
             <td><span class="field-name">cargo</span></td>
             <td><span class="field-type">string</span></td>
             <td><span class="badge-optional">opcional</span></td>
-            <td>Cargo del usuario (predeterminado: <code>"Profesor"</code>).</td>
+            <td>Cargo o puesto (máx. 255 caracteres).</td>
+          </tr>
+          <tr>
+            <td><span class="field-name">permissions</span></td>
+            <td><span class="field-type">string</span></td>
+            <td><span class="badge-optional">opcional</span></td>
+            <td>Nivel de permisos: <code>admin</code> o <code>profesor</code>. Predeterminado: <code>profesor</code>.</td>
           </tr>
         </tbody>
       </table>
@@ -126,10 +155,11 @@
         <div class="code-header"><span>Request Body</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"username"</span><span class="json-punc">:</span> <span class="json-str">"jperez"</span><span class="json-punc">,</span>
-  <span class="json-key">"email"</span><span class="json-punc">:</span>    <span class="json-str">"jperez@colegio.cl"</span><span class="json-punc">,</span>
-  <span class="json-key">"password"</span><span class="json-punc">:</span> <span class="json-str">"MiClave123"</span><span class="json-punc">,</span>
-  <span class="json-key">"cargo"</span><span class="json-punc">:</span>    <span class="json-str">"Administrador"</span>
+  <span class="json-key">"username"</span><span class="json-punc">:</span>    <span class="json-str">"jperez"</span><span class="json-punc">,</span>
+  <span class="json-key">"email"</span><span class="json-punc">:</span>       <span class="json-str">"jperez@universidad.edu"</span><span class="json-punc">,</span>
+  <span class="json-key">"password"</span><span class="json-punc">:</span>    <span class="json-str">"MiClave123"</span><span class="json-punc">,</span>
+  <span class="json-key">"cargo"</span><span class="json-punc">:</span>       <span class="json-str">"Técnico de Laboratorio"</span><span class="json-punc">,</span>
+  <span class="json-key">"permissions"</span><span class="json-punc">:</span> <span class="json-str">"admin"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
@@ -143,37 +173,39 @@
         <div class="code-header"><span>201 Created</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Usuario creado exitosamente"</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Usuario registrado exitosamente"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
-      <div class="code-block" style="margin-top:8px;">
-        <div class="code-header"><span>400 Bad Request — email duplicado</span></div>
+      <div class="code-block">
+        <div class="code-header"><span>400 Bad Request</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"error"</span><span class="json-punc">:</span> <span class="json-str">"correo electrónico ya existe"</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"error"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"El nombre de usuario ya está registrado"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ─── Login ─── -->
-<div class="section" id="login">
-  <h2 class="section-title">Login</h2>
-
+  <!-- POST /seguridad/login -->
   <div class="endpoint-block">
     <div class="endpoint-header">
       <span class="method-badge POST">POST</span>
       <span class="endpoint-path">/api/v1/seguridad/login</span>
-      <span class="endpoint-desc">Autenticar usuario y obtener token JWT</span>
+      <span class="endpoint-desc">Iniciar sesión y obtener token JWT</span>
+      <span class="auth-badge public">🌐 público</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
       <div class="callout success">
         <span class="callout-icon">✅</span>
-        <div>Endpoint <strong>público</strong>. Devuelve un token JWT con validez de <strong>24 horas</strong>. Algoritmo: <code>HS512</code>.</div>
+        <div>
+          Valida las credenciales y retorna un token JWT que debe usarse en todas las peticiones autenticadas.
+          El token incluye el <code>user_id</code> en su payload y expira en <strong>24 horas</strong>.
+        </div>
       </div>
 
       <p class="params-title">Cuerpo de la petición (JSON)</p>
@@ -181,10 +213,10 @@
         <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
         <tbody>
           <tr>
-            <td><span class="field-name">email</span></td>
-            <td><span class="field-type">string (email)</span></td>
+            <td><span class="field-name">username</span></td>
+            <td><span class="field-type">string</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Correo electrónico con el que se registró el usuario.</td>
+            <td>Nombre de usuario.</td>
           </tr>
           <tr>
             <td><span class="field-name">password</span></td>
@@ -200,7 +232,7 @@
         <div class="code-header"><span>Request Body</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"email"</span><span class="json-punc">:</span>    <span class="json-str">"jperez@colegio.cl"</span><span class="json-punc">,</span>
+  <span class="json-key">"username"</span><span class="json-punc">:</span> <span class="json-str">"jperez"</span><span class="json-punc">,</span>
   <span class="json-key">"password"</span><span class="json-punc">:</span> <span class="json-str">"MiClave123"</span>
 <span class="json-punc">}</span></pre>
         </div>
@@ -209,83 +241,153 @@
       <p class="params-title">Respuestas</p>
       <div class="response-codes">
         <span class="response-code r200">200 OK</span>
-        <span class="response-code r400">400 Bad Request</span>
-        <span class="response-code" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">401 Unauthorized</span>
+        <span class="response-code r401">401 Unauthorized</span>
       </div>
       <div class="code-block">
         <div class="code-header"><span>200 OK</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"id"</span><span class="json-punc">:</span>       <span class="json-num">5</span><span class="json-punc">,</span>
-  <span class="json-key">"username"</span><span class="json-punc">:</span> <span class="json-str">"jperez"</span><span class="json-punc">,</span>
-  <span class="json-key">"token"</span><span class="json-punc">:</span>    <span class="json-str">"eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1..."</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"token"</span><span class="json-punc">:</span>   <span class="json-str">"eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9..."</span><span class="json-punc">,</span>
+  <span class="json-key">"role"</span><span class="json-punc">:</span>    <span class="json-str">"admin"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"login exitoso"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
-      <div class="code-block" style="margin-top:8px;">
-        <div class="code-header"><span>401 Unauthorized — credenciales inválidas</span></div>
+      <div class="code-block">
+        <div class="code-header"><span>401 Unauthorized</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"error"</span><span class="json-punc">:</span> <span class="json-str">"credenciales inválidas"</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"error"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Credenciales incorrectas"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
 
-      <div class="callout warning" style="margin-top:16px;">
-        <span class="callout-icon">⚠️</span>
+      <div class="callout info">
+        <span class="callout-icon">🔑</span>
         <div>
-          Guarda el campo <code>token</code> del response. Debes enviarlo en todas las peticiones protegidas:
-          <code>Authorization: Bearer &lt;token&gt;</code>
+          <strong>Uso del token:</strong> El token retornado debe incluirse en el header de cada petición protegida:
+          <div class="code-block" style="margin-top:12px">
+            <div class="code-header"><span>Header de autorización</span></div>
+            <div class="code-body">
+              <pre>Authorization: eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...</pre>
+            </div>
+          </div>
+          <p style="margin-top:8px;font-size:13px;color:#94a3b8;">
+            Nota: El token se envía <strong>directamente</strong>, sin el prefijo <code>Bearer</code>.
+          </p>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ─── Perfil ─── -->
-<div class="section" id="perfil">
-  <h2 class="section-title">Perfil</h2>
-
+  <!-- GET /seguridad/perfil -->
   <div class="endpoint-block">
     <div class="endpoint-header">
       <span class="method-badge GET">GET</span>
-      <span class="endpoint-path">/api/v1/seguridad/perfil/{id}</span>
-      <span class="endpoint-desc">Obtener el perfil de un usuario</span>
+      <span class="endpoint-path">/api/v1/seguridad/perfil</span>
+      <span class="endpoint-desc">Obtener el perfil del usuario autenticado</span>
+      <span class="auth-badge login">🔒 login</span>
       <span class="toggle-arrow">▶</span>
     </div>
     <div class="endpoint-body">
-      <p class="params-title">Parámetros de ruta</p>
-      <table class="params-table">
-        <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="field-name">id</span></td>
-            <td><span class="field-type">integer</span></td>
-            <td>ID del usuario cuyo perfil se desea consultar (campo <code>id</code> devuelto al hacer login).</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div>
+          <strong>No recibe parámetros de ruta.</strong> El usuario se identifica automáticamente
+          a partir del <code>user_id</code> contenido en el token JWT enviado en el header <code>Authorization</code>.
+        </div>
+      </div>
 
+      <p class="params-title">Respuestas</p>
       <div class="response-codes">
         <span class="response-code r200">200 OK</span>
-        <span class="response-code r404">404 Not Found</span>
+        <span class="response-code r401">401 Unauthorized</span>
       </div>
       <div class="code-block">
         <div class="code-header"><span>200 OK</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"user"</span><span class="json-punc">:</span>  <span class="json-str">"jperez"</span><span class="json-punc">,</span>
-  <span class="json-key">"mail"</span><span class="json-punc">:</span>  <span class="json-str">"jperez@colegio.cl"</span><span class="json-punc">,</span>
-  <span class="json-key">"cargo"</span><span class="json-punc">:</span> <span class="json-str">"Administrador"</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
+  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
+    <span class="json-key">"id"</span><span class="json-punc">:</span>          <span class="json-num">1</span><span class="json-punc">,</span>
+    <span class="json-key">"username"</span><span class="json-punc">:</span>    <span class="json-str">"jperez"</span><span class="json-punc">,</span>
+    <span class="json-key">"email"</span><span class="json-punc">:</span>       <span class="json-str">"jperez@universidad.edu"</span><span class="json-punc">,</span>
+    <span class="json-key">"cargo"</span><span class="json-punc">:</span>       <span class="json-str">"Técnico de Laboratorio"</span><span class="json-punc">,</span>
+    <span class="json-key">"permissions"</span><span class="json-punc">:</span> <span class="json-str">"admin"</span>
+  <span class="json-punc">}</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
-      <div class="code-block" style="margin-top:8px;">
-        <div class="code-header"><span>404 Not Found</span></div>
-        <div class="code-body">
-          <pre><span class="json-punc">{</span>
-  <span class="json-key">"error"</span><span class="json-punc">:</span> <span class="json-str">"Perfil no encontrado"</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════
+     DECORADORES
+     ════════════════════════════════════ -->
+<div class="section" id="decoradores">
+  <h2 class="section-title">Decoradores de Autorización</h2>
+  <p class="section-subtitle">
+    Funciones decoradoras que protegen las vistas verificando el token JWT
+    y los permisos del usuario.
+  </p>
+
+  <div class="model-block">
+    <div class="model-header">
+      <h4>Decoradores disponibles</h4>
+    </div>
+    <div class="model-body">
+      <table class="params-table">
+        <thead><tr><th>Decorador</th><th>Acceso</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="field-name">@logguer_required</span></td>
+            <td><span class="auth-badge login" style="position:static;display:inline-flex;">🔒 login</span></td>
+            <td>
+              Verifica que exista un token JWT válido en el header <code>Authorization</code>.
+              Decodifica el token y adjunta <code>request.user_id</code> al request.
+              Si el token no existe, está expirado o es inválido, retorna <strong>401</strong>.
+            </td>
+          </tr>
+          <tr>
+            <td><span class="field-name">@admin_required</span></td>
+            <td><span class="auth-badge admin" style="position:static;display:inline-flex;">🛡️ admin</span></td>
+            <td>
+              Extiende <code>@logguer_required</code>: además de validar el token, verifica que
+              <code>perfil.permissions == "admin"</code>. Si no es admin, retorna <strong>403 Forbidden</strong>.
+              Se usa en todos los endpoints <code>DELETE</code>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout warning">
+    <span class="callout-icon">⚠️</span>
+    <div>
+      <strong>Respuestas de error de autorización:</strong>
+      <div style="margin-top:12px;">
+        <div class="code-block">
+          <div class="code-header"><span>401 Unauthorized — Token faltante, expirado o inválido</span></div>
+          <div class="code-body">
+            <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"error"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Token no proporcionado"</span>
 <span class="json-punc">}</span></pre>
+          </div>
+        </div>
+        <div class="code-block" style="margin-top:12px;">
+          <div class="code-header"><span>403 Forbidden — Permisos insuficientes</span></div>
+          <div class="code-body">
+            <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"error"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Permisos insuficientes"</span>
+<span class="json-punc">}</span></pre>
+          </div>
         </div>
       </div>
     </div>
