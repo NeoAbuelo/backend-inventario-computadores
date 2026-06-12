@@ -29,7 +29,7 @@ class CreateUserView(APIView):
         if request.data.get('password')==None or not request.data.get('password'):
             return Response({'error': 'contraseña es requerida'}, status=status.HTTP_400_BAD_REQUEST)
         if request.data.get('email')==None or not request.data.get('email'):
-            return Response({'error': 'correo electrónico es requerido'}, status=status.HTTP_400_BAD_REQUEST),
+            return Response({'error': 'correo electrónico es requerido'}, status=status.HTTP_400_BAD_REQUEST)
         
         
         if User.objects.filter(email=request.data.get('email')).exists():
@@ -45,7 +45,7 @@ class CreateUserView(APIView):
                 perfil = Perfil.objects.create(
                     user=user,
                     cargo=request.data.get('cargo', 'Profesor'),
-                    permissions = request.data.get('permissions', 'profesor')
+                    permissions = 'profesor'
                 )
                 
                 return Response({'message': 'Usuario creado exitosamente'}, status=status.HTTP_201_CREATED)

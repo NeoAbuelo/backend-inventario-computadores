@@ -28,11 +28,11 @@
   <!-- Stats -->
   <div class="stats-row">
     <div class="stat-box blue">
-      <div class="stat-num">25</div>
+      <div class="stat-num">30</div>
       <div class="stat-label">Endpoints</div>
     </div>
     <div class="stat-box green">
-      <div class="stat-num">5</div>
+      <div class="stat-num">6</div>
       <div class="stat-label">Modelos</div>
     </div>
     <div class="stat-box purple">
@@ -50,7 +50,7 @@
     <div class="card">
       <div class="card-icon blue">🗄️</div>
       <h3>Módulo Inventario</h3>
-      <p>Gestión de dispositivos (categorías de hardware) y equipos físicos del laboratorio. CRUD completo con paginación y filtrado por tipo.</p>
+      <p>Gestión de dispositivos (categorías de hardware), equipos físicos y consumibles del laboratorio. CRUD completo con paginación y filtrado por tipo.</p>
       <a class="card-link" href="{% url 'doc:inventario' %}">Ver documentación →</a>
     </div>
     <div class="card">
@@ -129,7 +129,7 @@
           <td><span class="field-name">page_size</span></td>
           <td><span class="field-type">integer</span></td>
           <td>10 (Inventario) / 20 (SalaPC)</td>
-          <td>Cantidad de registros por página (máx. 100). En el módulo SalaPC el parámetro se llama <code>Limit</code>.</td>
+          <td>Cantidad de registros por página (máx. 50). En el módulo SalaPC el parámetro se llama <code>Limit</code>.</td>
         </tr>
       </tbody>
     </table>
@@ -229,6 +229,11 @@
         <td><span class="response-code r404">404 Not Found</span></td>
         <td>No encontrado</td>
         <td>El recurso solicitado no existe en la base de datos.</td>
+      </tr>
+      <tr>
+        <td><span class="response-code r400">429 Too Many Requests</span></td>
+        <td>Límite de peticiones</td>
+        <td>Se superó el límite de 1000 peticiones diarias para usuarios anónimos.</td>
       </tr>
     </tbody>
   </table>
@@ -340,6 +345,39 @@
     Para obtener un token, utiliza el endpoint
     <a href="{% url 'doc:seguridad' %}#login" style="color:#0ea5e9;font-weight:600;">POST /api/v1/seguridad/login</a>.
     El token tiene una validez de <strong>24 horas</strong> y utiliza el algoritmo <strong>HS512</strong>.
+  </p>
+</div>
+
+<!-- ─── Rate Limiting ─── -->
+<div class="section" id="rate-limiting">
+  <h2 class="section-title">Rate Limiting</h2>
+  <p class="section-subtitle">La API aplica límites de peticiones para proteger el servidor de uso excesivo.</p>
+
+  <div class="callout warning">
+    <span class="callout-icon">⚠️</span>
+    <div>
+      El throttle solo aplica a peticiones <strong>anónimas</strong> (sin token JWT válido).
+      Las peticiones autenticadas no tienen límite configurado actualmente.
+    </div>
+  </div>
+
+  <table class="params-table">
+    <thead>
+      <tr><th>Tipo de cliente</th><th>Límite</th><th>Ventana</th><th>Identificador</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Anónimo (sin token)</td>
+        <td><strong>1000 peticiones</strong></td>
+        <td>Por día</td>
+        <td>IP de origen</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:13.5px;color:#64748b;margin-top:16px;">
+    Al superar el límite, la API devuelve <span class="response-code r400">429 Too Many Requests</span>
+    con el header <code>Retry-After</code> indicando los segundos hasta que el contador se reinicia.
   </p>
 </div>
 

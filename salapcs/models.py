@@ -8,7 +8,7 @@ class Profesor(models.Model):
     asignatura = models.CharField("Asignatura", max_length=100)
 
     def __str__(self):
-        return f"{self.nombre} - {self.correo} | {self.asignatura}"
+        return f"{self.nombre} {self.apellido}"
     
     class Meta:
         db_table = "profesor"

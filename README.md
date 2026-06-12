@@ -13,6 +13,7 @@ Backend REST API para la gestión de inventario de hardware y reservas de sala d
 - [Variables de entorno](#variables-de-entorno)
 - [Base URL](#base-url)
 - [Autenticación](#autenticación)
+- [Rate Limiting](#rate-limiting)
 - [Paginación](#paginación)
 - [Códigos de respuesta](#códigos-de-respuesta)
 - [Endpoints](#endpoints)
@@ -22,11 +23,11 @@ Backend REST API para la gestión de inventario de hardware y reservas de sala d
 
 ## Descripción
 
-**InvCompu API** es el backend de una aplicación de gestión para laboratorios de computación. Expone **25 endpoints** organizados en 4 módulos:
+**InvCompu API** es el backend de una aplicación de gestión para laboratorios de computación. Expone **30 endpoints** organizados en 4 módulos:
 
 | Módulo | Descripción | Endpoints |
-|--------|-------------|-----------|
-| `inventario` | Tipos de dispositivos y equipos físicos del laboratorio | 11 |
+|--------|-------------|----------|
+| `inventario` | Tipos de dispositivos, equipos físicos y consumibles del laboratorio | 16 |
 | `salapcs` | Profesores y reservas de uso de sala | 10 |
 | `seguridad` | Registro, login y perfil de usuario con JWT | 3 |
 | `dashboard` | Resumen semanal (equipos + reservas de la semana) | 1 |
@@ -125,14 +126,14 @@ En desarrollo local: `http://127.0.0.1:8000/api/v1/`
 
 La API usa **JWT** (JSON Web Tokens) con el algoritmo **HS512**.
 
-1. **Obtener token:** `POST /api/v1/seguridad/login` con `username` y `password`.
+1. **Obtener token:** `POST /api/v1/seguridad/login` con `email` y `password`.
 2. **Usar token:** Incluir en el header `Authorization` de cada petición protegida.
 
 ```
-Authorization: eyJhbGciOiJIUzUxMiIs...
+Authorization: Bearer eyJhbGciOiJIUzUxMiIs...
 ```
 
-> **Nota:** El token se envía directamente, **sin** el prefijo `Bearer`.
+> **Nota:** El token debe enviarse con el prefijo `Bearer`.
 
 **Roles:**
 
@@ -140,6 +141,20 @@ Authorization: eyJhbGciOiJIUzUxMiIs...
 |-----|----------|
 | `profesor` | GET, POST, PUT en todos los módulos |
 | `admin` | Todo lo anterior + DELETE |
+
+---
+
+## Rate Limiting
+
+La API aplica throttling para proteger el servidor de uso excesivo.
+
+| Tipo de cliente | Límite | Ventana | Identificador |
+|-----------------|--------|---------|---------------|
+| Anónimo (sin token) | **1 000 peticiones** | Por día | IP de origen |
+
+> Las peticiones autenticadas no tienen límite configurado actualmente.
+
+Al superar el límite se devuelve `429 Too Many Requests` con el header `Retry-After`.
 
 ---
 
@@ -159,7 +174,7 @@ Los listados devuelven resultados paginados con la siguiente estructura:
 
 | Módulo | Parámetro de tamaño | Predeterminado | Máximo |
 |--------|---------------------|----------------|--------|
-| `inventario` | `page_size` | 10 | 100 |
+| `inventario` | `page_size` | 10 | 50 |
 | `salapcs` | `Limit` | 20 | — |
 
 ---
@@ -174,6 +189,7 @@ Los listados devuelven resultados paginados con la siguiente estructura:
 | `401` | Token faltante, expirado o inválido |
 | `403` | Permisos insuficientes (requiere admin) |
 | `404` | Recurso no encontrado |
+| `429` | Límite de peticiones superado (1000/día para usuarios anónimos) |
 | `500` | Error interno del servidor |
 
 ---
@@ -201,6 +217,16 @@ Los listados devuelven resultados paginados con la siguiente estructura:
 | `DELETE` | `/api/v1/equipos/{id}` | Eliminar equipo | 🛡️ admin |
 | `GET` | `/api/v1/equipos/dispositivo/{id}` | Equipos por tipo de dispositivo | 🔒 login |
 
+### Inventario — Consumibles
+
+| Método | Ruta | Descripción | Acceso |
+|--------|------|-------------|--------|
+| `GET` | `/api/v1/consumibles` | Listar consumibles (paginado) | 🔒 login |
+| `POST` | `/api/v1/consumibles` | Crear consumible | 🔒 login |
+| `GET` | `/api/v1/consumibles/{id}` | Obtener consumible por ID | 🔒 login |
+| `PUT` | `/api/v1/consumibles/{id}` | Actualizar consumible | 🔒 login |
+| `DELETE` | `/api/v1/consumibles/{id}` | Eliminar consumible | 🛡️ admin |
+
 ### Sala de PCs — Profesores
 
 | Método | Ruta | Descripción | Acceso |
@@ -225,7 +251,7 @@ Los listados devuelven resultados paginados con la siguiente estructura:
 
 | Método | Ruta | Descripción | Acceso |
 |--------|------|-------------|--------|
-| `POST` | `/api/v1/seguridad/registro` | Registrar usuario | 🌐 público |
+| `POST` | `/api/v1/seguridad/reg` | Registrar usuario | 🌐 público |
 | `POST` | `/api/v1/seguridad/login` | Iniciar sesión (obtener JWT) | 🌐 público |
 | `GET` | `/api/v1/seguridad/perfil` | Perfil del usuario autenticado | 🔒 login |
 
@@ -239,13 +265,25 @@ Los listados devuelven resultados paginados con la siguiente estructura:
 
 ## Documentación web
 
-La API incluye una documentación web interactiva accesible en:
+La API incluye una interfaz de documentación HTML interactiva accesible en:
 
+**Producción:**
 ```
-http://<host>/doc/
+https://backend-inventario-computadores-production.up.railway.app/docs/
 ```
 
-Incluye documentación detallada de cada endpoint con modelos de datos, ejemplos de petición/respuesta y códigos de error.
+**Desarrollo local:**
+```
+http://127.0.0.1:8000/docs/
+```
+
+| Ruta | Contenido |
+|------|----------|
+| `/docs/` | Página principal: overview, paginación y códigos HTTP |
+| `/docs/inventario/` | Documentación del módulo Inventario |
+| `/docs/salapcs/` | Documentación del módulo Sala de PCs |
+| `/docs/seguridad/` | Documentación del módulo Seguridad |
+| `/docs/dashboard/` | Documentación del módulo Dashboard |
 
 ```json
 {
@@ -273,10 +311,11 @@ Incluye documentación detallada de cada endpoint con modelos de datos, ejemplos
 
 | Código | Significado | Descripción |
 |--------|-------------|-------------|
-| `200 OK` | Éxito | GET y PUT exitosos. |
+| `200 OK` | Éxito | GET, PUT y DELETE exitosos. |
 | `201 Created` | Recurso creado | POST exitoso. |
-| `204 No Content` | Sin contenido | DELETE en algunos endpoints. |
 | `400 Bad Request` | Error de validación | Los datos no pasaron la validación. |
+| `401 Unauthorized` | Sin autorización | Token JWT ausente, inválido o expirado. |
+| `403 Forbidden` | Permisos insuficientes | El usuario no tiene rol admin (DELETE). |
 | `404 Not Found` | No encontrado | El recurso no existe. |
 
 **Estructura de error (400):**
@@ -318,6 +357,15 @@ Incluye documentación detallada de cada endpoint con modelos de datos, ejemplos
 | `descripcion` | text | opcional | Notas adicionales. |
 | `date_reg` | date | requerido | Fecha de ingreso. Formato: `YYYY-MM-DD`. |
 | `is_active` | boolean | opcional | Indica si el equipo está activo. Predeterminado: `true`. |
+
+#### `Consumible` — tabla `consumible`
+
+| Campo | Tipo | Constraint | Descripción |
+|-------|------|------------|-------------|
+| `id` | integer | auto | Clave primaria. |
+| `name` | string(100) | requerido, único | Nombre del consumible. |
+| `cantidad` | integer | opcional | Stock disponible. Predeterminado: `0`. |
+| `descripcion` | text | opcional | Descripción o notas adicionales. |
 
 ---
 
@@ -462,6 +510,63 @@ Lista los equipos filtrados por tipo de dispositivo, ordenados por `-id`, pagina
 
 ---
 
+### Consumibles
+
+#### `GET /api/v1/consumibles`
+Lista todos los consumibles ordenados por `-id`, paginado.
+
+**Respuesta 200 — campo `data`:**
+```json
+{ "id": 1, "name": "Cable HDMI", "cantidad": 12, "descripcion": "Cables de repuesto para monitores" }
+```
+
+---
+
+#### `POST /api/v1/consumibles`
+Crea un nuevo consumible.
+
+**Body:**
+```json
+{ "name": "Cable HDMI", "cantidad": 12, "descripcion": "Cables de repuesto para monitores" }
+```
+
+**Respuesta 201:**
+```json
+{ "status": "ok", "message": "Registro creado exitosamente" }
+```
+
+---
+
+#### `GET /api/v1/consumibles/{id}`
+Retorna el detalle de un consumible.
+
+**Respuesta 200:**
+```json
+{ "status": "ok", "data": { "id": 1, "name": "Cable HDMI", "cantidad": 12, "descripcion": "Cables de repuesto para monitores" } }
+```
+
+---
+
+#### `PUT /api/v1/consumibles/{id}`
+Actualización completa de un consumible. Requiere todos los campos.
+
+**Respuesta 200:**
+```json
+{ "status": "ok", "message": "Registro actualizado exitosamente" }
+```
+
+---
+
+#### `DELETE /api/v1/consumibles/{id}`
+Elimina un consumible del inventario. Requiere rol **admin**.
+
+**Respuesta 200:**
+```json
+{ "status": "ok", "message": "Registro eliminado exitosamente" }
+```
+
+---
+
 ## Módulo Sala de PCs
 
 ### Modelos
@@ -576,7 +681,7 @@ Registra una nueva reserva de sala.
 
 **Respuesta 201:**
 ```json
-{ "status": "ok", "message": "SalaPC created successfully" }
+{ "status": "ok", "message": "Reserva de sala creada exitosamente" }
 ```
 
 ---
@@ -591,7 +696,7 @@ Actualización completa de una reserva. Todos los campos son requeridos.
 
 **Respuesta 200:**
 ```json
-{ "status": "ok", "message": "SalaPC updated successfully" }
+{ "status": "ok", "message": "Reserva de sala actualizada exitosamente" }
 ```
 
 ---
@@ -599,31 +704,9 @@ Actualización completa de una reserva. Todos los campos son requeridos.
 #### `DELETE /api/v1/salapcs/{id}`
 Elimina una reserva de sala.
 
-**Respuesta 204:**
+**Respuesta 200:**
 ```json
-{ "status": "ok", "message": "SalaPC deleted successfully" }
+{ "status": "ok", "message": "Reserva de sala eliminada correctamente" }
 ```
 
 ---
-
-## Documentación web
-
-La API incluye una interfaz de documentación HTML accesible en:
-
-**Producción:**
-```
-https://backend-inventario-computadores-production.up.railway.app/docs/
-```
-
-**Desarrollo local:**
-```
-http://127.0.0.1:8000/docs/
-```
-
-| Ruta | Contenido |
-|------|----------|
-| `/docs/` | Página principal: overview, paginación y códigos HTTP |
-| `/docs/inventario/` | Documentación del módulo Inventario |
-| `/docs/salapcs/` | Documentación del módulo Sala de PCs |
-| `/docs/seguridad/` | Documentación del módulo Seguridad |
-| `/docs/dashboard/` | Documentación del módulo Dashboard |

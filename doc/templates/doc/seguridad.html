@@ -99,7 +99,7 @@
   <div class="endpoint-block">
     <div class="endpoint-header">
       <span class="method-badge POST">POST</span>
-      <span class="endpoint-path">/api/v1/seguridad/registro</span>
+      <span class="endpoint-path">/api/v1/seguridad/reg</span>
       <span class="endpoint-desc">Registrar un nuevo usuario</span>
       <span class="auth-badge public">🌐 público</span>
       <span class="toggle-arrow">▶</span>
@@ -173,8 +173,7 @@
         <div class="code-header"><span>201 Created</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
-  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Usuario registrado exitosamente"</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Usuario creado exitosamente"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
@@ -182,8 +181,7 @@
         <div class="code-header"><span>400 Bad Request</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"error"</span><span class="json-punc">,</span>
-  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"El nombre de usuario ya está registrado"</span>
+  <span class="json-key">"error"</span><span class="json-punc">:</span> <span class="json-str">"correo electrónico ya existe"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
@@ -213,10 +211,10 @@
         <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
         <tbody>
           <tr>
-            <td><span class="field-name">username</span></td>
-            <td><span class="field-type">string</span></td>
+            <td><span class="field-name">email</span></td>
+            <td><span class="field-type">string (email)</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Nombre de usuario.</td>
+            <td>Correo electrónico del usuario.</td>
           </tr>
           <tr>
             <td><span class="field-name">password</span></td>
@@ -232,7 +230,7 @@
         <div class="code-header"><span>Request Body</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"username"</span><span class="json-punc">:</span> <span class="json-str">"jperez"</span><span class="json-punc">,</span>
+  <span class="json-key">"email"</span><span class="json-punc">:</span> <span class="json-str">"jperez@universidad.edu"</span><span class="json-punc">,</span>
   <span class="json-key">"password"</span><span class="json-punc">:</span> <span class="json-str">"MiClave123"</span>
 <span class="json-punc">}</span></pre>
         </div>
@@ -247,10 +245,10 @@
         <div class="code-header"><span>200 OK</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"ok"</span><span class="json-punc">,</span>
-  <span class="json-key">"token"</span><span class="json-punc">:</span>   <span class="json-str">"eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9..."</span><span class="json-punc">,</span>
-  <span class="json-key">"role"</span><span class="json-punc">:</span>    <span class="json-str">"admin"</span><span class="json-punc">,</span>
-  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"login exitoso"</span>
+  <span class="json-key">"id"</span><span class="json-punc">:</span>       <span class="json-num">1</span><span class="json-punc">,</span>
+  <span class="json-key">"username"</span><span class="json-punc">:</span> <span class="json-str">"jperez"</span><span class="json-punc">,</span>
+  <span class="json-key">"token"</span><span class="json-punc">:</span>    <span class="json-str">"eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9..."</span><span class="json-punc">,</span>
+  <span class="json-key">"role"</span><span class="json-punc">:</span>     <span class="json-str">"admin"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
@@ -258,8 +256,7 @@
         <div class="code-header"><span>401 Unauthorized</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"error"</span><span class="json-punc">,</span>
-  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Credenciales incorrectas"</span>
+  <span class="json-key">"error"</span><span class="json-punc">:</span> <span class="json-str">"credenciales inválidas"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
@@ -271,11 +268,11 @@
           <div class="code-block" style="margin-top:12px">
             <div class="code-header"><span>Header de autorización</span></div>
             <div class="code-body">
-              <pre>Authorization: eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...</pre>
+              <pre>Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...</pre>
             </div>
           </div>
           <p style="margin-top:8px;font-size:13px;color:#94a3b8;">
-            Nota: El token se envía <strong>directamente</strong>, sin el prefijo <code>Bearer</code>.
+            Nota: El token debe enviarse con el prefijo <code>Bearer</code>, por ejemplo: <code>Bearer eyJhbGci...</code>
           </p>
         </div>
       </div>
@@ -309,14 +306,11 @@
         <div class="code-header"><span>200 OK</span></div>
         <div class="code-body">
           <pre><span class="json-punc">{</span>
-  <span class="json-key">"status"</span><span class="json-punc">:</span> <span class="json-str">"ok"</span><span class="json-punc">,</span>
-  <span class="json-key">"data"</span><span class="json-punc">:</span> <span class="json-punc">{</span>
-    <span class="json-key">"id"</span><span class="json-punc">:</span>          <span class="json-num">1</span><span class="json-punc">,</span>
-    <span class="json-key">"username"</span><span class="json-punc">:</span>    <span class="json-str">"jperez"</span><span class="json-punc">,</span>
-    <span class="json-key">"email"</span><span class="json-punc">:</span>       <span class="json-str">"jperez@universidad.edu"</span><span class="json-punc">,</span>
-    <span class="json-key">"cargo"</span><span class="json-punc">:</span>       <span class="json-str">"Técnico de Laboratorio"</span><span class="json-punc">,</span>
-    <span class="json-key">"permissions"</span><span class="json-punc">:</span> <span class="json-str">"admin"</span>
-  <span class="json-punc">}</span>
+  <span class="json-key">"user"</span><span class="json-punc">:</span>        <span class="json-num">1</span><span class="json-punc">,</span>
+  <span class="json-key">"user_name"</span><span class="json-punc">:</span>   <span class="json-str">"jperez"</span><span class="json-punc">,</span>
+  <span class="json-key">"mail"</span><span class="json-punc">:</span>        <span class="json-str">"jperez@universidad.edu"</span><span class="json-punc">,</span>
+  <span class="json-key">"cargo"</span><span class="json-punc">:</span>       <span class="json-str">"Técnico de Laboratorio"</span><span class="json-punc">,</span>
+  <span class="json-key">"permissions"</span><span class="json-punc">:</span> <span class="json-str">"admin"</span>
 <span class="json-punc">}</span></pre>
         </div>
       </div>
