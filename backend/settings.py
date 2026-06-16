@@ -150,7 +150,7 @@ REST_FRAMEWORK = {
 JWT_ALGORITHM = 'HS512'
 JWT_EXP_DAYS = 1
 
-CSRF_ALLOWED_ORIGINS = os.getenv('CSRF_ALLOWED_ORIGINS', '').split(',')
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
 
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 # Necesario para enviar el encabezado Authorization desde el front.
