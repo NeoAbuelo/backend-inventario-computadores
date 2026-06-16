@@ -104,7 +104,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'es-es'
+LANGUAGE_CODE = 'es'
 
 TIME_ZONE = 'America/Santiago'
 
@@ -150,7 +150,9 @@ REST_FRAMEWORK = {
 JWT_ALGORITHM = 'HS512'
 JWT_EXP_DAYS = 1
 
-CORS_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
+CSRF_ALLOWED_ORIGINS = os.getenv('CSRF_ALLOWED_ORIGINS', '').split(',')
+
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 # Necesario para enviar el encabezado Authorization desde el front.
 CORS_ALLOW_HEADERS = [
     'accept',
