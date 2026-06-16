@@ -17,20 +17,26 @@ Backend REST API para la gestión de inventario de hardware y reservas de sala d
 - [Paginación](#paginación)
 - [Códigos de respuesta](#códigos-de-respuesta)
 - [Endpoints](#endpoints)
+- [Módulo Inventario](#módulo-inventario)
+- [Módulo Sala de PCs](#módulo-sala-de-pcs)
+- [Módulo Dashboard](#módulo-dashboard)
+- [Reportes PDF](#reportes-pdf)
 - [Documentación web](#documentación-web)
 
 ---
 
 ## Descripción
 
-**InvCompu API** es el backend de una aplicación de gestión para laboratorios de computación. Expone **30 endpoints** organizados en 4 módulos:
+**InvCompu API** es el backend de una aplicación de gestión para laboratorios de computación. Está organizada en módulos:
 
-| Módulo | Descripción | Endpoints |
-|--------|-------------|----------|
-| `inventario` | Tipos de dispositivos, equipos físicos y consumibles del laboratorio | 16 |
-| `salapcs` | Profesores y reservas de uso de sala | 10 |
-| `seguridad` | Registro, login y perfil de usuario con JWT | 3 |
-| `dashboard` | Resumen semanal (equipos + reservas de la semana) | 1 |
+| Módulo | Descripción |
+|--------|-------------|
+| `inventario` | Tipos de dispositivos, equipos físicos y consumibles del laboratorio |
+| `salapcs` | Profesores y reservas de uso de sala |
+| `dashboard` | Resumen semanal (conteo de equipos, consumibles con bajo stock y reservas de la semana) |
+| `doc` | Documentación web HTML interactiva (`/docs/`) |
+
+> **Nota:** Esta versión **no incluye autenticación**. La app `seguridad` (login/registro/perfil con JWT) fue retirada del proyecto; todos los endpoints son de acceso público. Ver [Autenticación](#autenticación).
 
 ---
 
@@ -41,10 +47,11 @@ Backend REST API para la gestión de inventario de hardware y reservas de sala d
 | Lenguaje | Python 3.13 |
 | Framework | Django 6.0.3 |
 | API | Django REST Framework 3.16.1 |
-| Autenticación | JWT (python-jose, HS512, 24h) |
-| Base de datos | SQLite (dev) / PostgreSQL (prod vía dj-database-url) |
+| Base de datos | SQLite (activa) / PostgreSQL (opcional vía dj-database-url) |
+| Reportes PDF | reportlab |
 | Archivos estáticos | WhiteNoise |
 | CORS | django-cors-headers |
+| Utilidades dev | django-extensions, django-seed |
 | Servidor producción | Gunicorn |
 
 ---
@@ -53,14 +60,16 @@ Backend REST API para la gestión de inventario de hardware y reservas de sala d
 
 ```
 backend/
-├── backend/          # Configuración Django (settings, urls, wsgi)
-├── inventario/       # App: Dispositivos + Equipos
+├── backend/          # Configuración Django (settings, urls, wsgi, asgi)
+├── inventario/       # App: Dispositivos + Equipos + Consumibles
+│   └── views/        # Vistas por recurso + paginación + reporte PDF
 ├── salapcs/          # App: Profesores + Reservas de Sala
-├── seguridad/        # App: Auth JWT (registro, login, perfil)
+│   └── views/        # Vistas por recurso + paginación + reporte PDF
 ├── dashboard/        # App: Resumen semanal
 ├── doc/              # App: Documentación web interactiva
 ├── manage.py
-├── requirements.txt
+├── pyproject.toml    # Dependencias (uv) + uv.lock
+├── requirements.txt  # Dependencias (pip)
 ├── Procfile          # Gunicorn (producción)
 └── runtime.txt       # Python 3.13
 ```
@@ -79,8 +88,9 @@ python -m venv .venv
 .venv\Scripts\activate        # Windows
 source .venv/bin/activate     # Linux / macOS
 
-# 3. Instalar dependencias
+# 3. Instalar dependencias (pip o uv)
 pip install -r requirements.txt
+# o bien:  uv sync
 
 # 4. Configurar variables de entorno
 cp .env.example .env          # editar con tus valores
@@ -88,7 +98,10 @@ cp .env.example .env          # editar con tus valores
 # 5. Aplicar migraciones
 python manage.py migrate
 
-# 6. Iniciar servidor de desarrollo
+# 6. (Opcional) Poblar datos de prueba
+python manage.py seed inventario --number=20
+
+# 7. Iniciar servidor de desarrollo
 python manage.py runserver
 ```
 
@@ -100,13 +113,13 @@ Crea un archivo `.env` en la raíz del proyecto:
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `SECRET_KEY` | Clave secreta de Django (usada también para firmar JWT) | `django-insecure-xxxxxx` |
-| `DEBUG` | Modo de depuración | `True` |
-| `DATABASE_URL` | URL de conexión PostgreSQL (si no se define, usa SQLite) | `postgres://user:pass@host/db` |
-| `CORS_ALLOWED_ORIGINS` | Orígenes CORS permitidos (separados por coma) | `http://localhost:5173` |
-| `CSRF_TRUSTED_ORIGINS` | Orígenes de confianza para CSRF | `http://localhost:5173` |
+| `SECRET_KEY` | Clave secreta de Django | `django-insecure-xxxxxx` |
+| `DEBUG` | Modo de depuración (`True` para activarlo) | `True` |
 | `ALLOWED_HOSTS` | Hosts permitidos (separados por coma) | `localhost,127.0.0.1` |
-| `BASE_URL` | URL base del servidor (para links de paginación) | `http://127.0.0.1:8000` |
+
+> La base de datos por defecto es **SQLite** (`db.sqlite3`). Para usar PostgreSQL hay que descomentar la línea `dj_database_url.config(...)` en `backend/settings.py` y definir `DATABASE_URL`.
+>
+> Los orígenes CORS permitidos están fijados en `settings.py` (`CORS_ALLOWED_ORIGINS`) a `http://localhost:5173` y `http://127.0.0.1:5173`.
 
 ---
 
@@ -124,35 +137,17 @@ En desarrollo local: `http://127.0.0.1:8000/api/v1/`
 
 ## Autenticación
 
-La API usa **JWT** (JSON Web Tokens) con el algoritmo **HS512**.
-
-1. **Obtener token:** `POST /api/v1/seguridad/login` con `email` y `password`.
-2. **Usar token:** Incluir en el header `Authorization` de cada petición protegida.
-
-```
-Authorization: Bearer eyJhbGciOiJIUzUxMiIs...
-```
-
-> **Nota:** El token debe enviarse con el prefijo `Bearer`.
-
-**Roles:**
-
-| Rol | Permisos |
-|-----|----------|
-| `profesor` | GET, POST, PUT en todos los módulos |
-| `admin` | Todo lo anterior + DELETE |
+⚠️ **Actualmente la API no implementa autenticación ni autorización.** Todos los endpoints son públicos y no requieren token ni roles. No hay distinción entre usuarios `profesor` y `admin`; cualquier cliente puede ejecutar operaciones de lectura y escritura (incluyendo `DELETE`).
 
 ---
 
 ## Rate Limiting
 
-La API aplica throttling para proteger el servidor de uso excesivo.
+La API aplica throttling de DRF para clientes anónimos.
 
 | Tipo de cliente | Límite | Ventana | Identificador |
 |-----------------|--------|---------|---------------|
-| Anónimo (sin token) | **1 000 peticiones** | Por día | IP de origen |
-
-> Las peticiones autenticadas no tienen límite configurado actualmente.
+| Anónimo | **100 peticiones** | Por día | IP de origen |
 
 Al superar el límite se devuelve `429 Too Many Requests` con el header `Retry-After`.
 
@@ -175,135 +170,9 @@ Los listados devuelven resultados paginados con la siguiente estructura:
 | Módulo | Parámetro de tamaño | Predeterminado | Máximo |
 |--------|---------------------|----------------|--------|
 | `inventario` | `page_size` | 10 | 50 |
-| `salapcs` | `Limit` | 20 | — |
+| `salapcs` | `Limit` | 20 | 100 |
 
----
-
-## Códigos de respuesta
-
-| Código | Significado |
-|--------|-------------|
-| `200` | Operación exitosa |
-| `201` | Recurso creado exitosamente |
-| `400` | Datos inválidos o incompletos |
-| `401` | Token faltante, expirado o inválido |
-| `403` | Permisos insuficientes (requiere admin) |
-| `404` | Recurso no encontrado |
-| `429` | Límite de peticiones superado (1000/día para usuarios anónimos) |
-| `500` | Error interno del servidor |
-
----
-
-## Endpoints
-
-### Inventario — Dispositivos
-
-| Método | Ruta | Descripción | Acceso |
-|--------|------|-------------|--------|
-| `GET` | `/api/v1/dispositivos` | Listar dispositivos (paginado) | 🔒 login |
-| `POST` | `/api/v1/dispositivos` | Crear dispositivo | 🔒 login |
-| `GET` | `/api/v1/dispositivos/{id}` | Obtener dispositivo por ID | 🔒 login |
-| `PUT` | `/api/v1/dispositivos/{id}` | Actualizar dispositivo | 🔒 login |
-| `DELETE` | `/api/v1/dispositivos/{id}` | Eliminar dispositivo | 🛡️ admin |
-
-### Inventario — Equipos
-
-| Método | Ruta | Descripción | Acceso |
-|--------|------|-------------|--------|
-| `GET` | `/api/v1/equipos` | Listar equipos (paginado) | 🔒 login |
-| `POST` | `/api/v1/equipos` | Registrar equipo | 🔒 login |
-| `GET` | `/api/v1/equipos/{id}` | Obtener equipo por ID | 🔒 login |
-| `PUT` | `/api/v1/equipos/{id}` | Actualizar equipo | 🔒 login |
-| `DELETE` | `/api/v1/equipos/{id}` | Eliminar equipo | 🛡️ admin |
-| `GET` | `/api/v1/equipos/dispositivo/{id}` | Equipos por tipo de dispositivo | 🔒 login |
-
-### Inventario — Consumibles
-
-| Método | Ruta | Descripción | Acceso |
-|--------|------|-------------|--------|
-| `GET` | `/api/v1/consumibles` | Listar consumibles (paginado) | 🔒 login |
-| `POST` | `/api/v1/consumibles` | Crear consumible | 🔒 login |
-| `GET` | `/api/v1/consumibles/{id}` | Obtener consumible por ID | 🔒 login |
-| `PUT` | `/api/v1/consumibles/{id}` | Actualizar consumible | 🔒 login |
-| `DELETE` | `/api/v1/consumibles/{id}` | Eliminar consumible | 🛡️ admin |
-
-### Sala de PCs — Profesores
-
-| Método | Ruta | Descripción | Acceso |
-|--------|------|-------------|--------|
-| `GET` | `/api/v1/profesores` | Listar profesores (paginado) | 🔒 login |
-| `POST` | `/api/v1/profesores` | Registrar profesor | 🔒 login |
-| `GET` | `/api/v1/profesores/{id}` | Obtener profesor por ID | 🔒 login |
-| `PUT` | `/api/v1/profesores/{id}` | Actualizar profesor | 🔒 login |
-| `DELETE` | `/api/v1/profesores/{id}` | Eliminar profesor | 🛡️ admin |
-
-### Sala de PCs — Reservas
-
-| Método | Ruta | Descripción | Acceso |
-|--------|------|-------------|--------|
-| `GET` | `/api/v1/salapcs` | Listar reservas (paginado) | 🔒 login |
-| `POST` | `/api/v1/salapcs` | Crear reserva | 🔒 login |
-| `GET` | `/api/v1/salapcs/{id}` | Obtener reserva por ID | 🔒 login |
-| `PUT` | `/api/v1/salapcs/{id}` | Actualizar reserva | 🔒 login |
-| `DELETE` | `/api/v1/salapcs/{id}` | Eliminar reserva | 🛡️ admin |
-
-### Seguridad
-
-| Método | Ruta | Descripción | Acceso |
-|--------|------|-------------|--------|
-| `POST` | `/api/v1/seguridad/reg` | Registrar usuario | 🌐 público |
-| `POST` | `/api/v1/seguridad/login` | Iniciar sesión (obtener JWT) | 🌐 público |
-| `GET` | `/api/v1/seguridad/perfil` | Perfil del usuario autenticado | 🔒 login |
-
-### Dashboard
-
-| Método | Ruta | Descripción | Acceso |
-|--------|------|-------------|--------|
-| `GET` | `/api/v1/dashboard/` | Resumen semanal del sistema | 🔒 login |
-
----
-
-## Documentación web
-
-La API incluye una interfaz de documentación HTML interactiva accesible en:
-
-**Producción:**
-```
-https://backend-inventario-computadores-production.up.railway.app/docs/
-```
-
-**Desarrollo local:**
-```
-http://127.0.0.1:8000/docs/
-```
-
-| Ruta | Contenido |
-|------|----------|
-| `/docs/` | Página principal: overview, paginación y códigos HTTP |
-| `/docs/inventario/` | Documentación del módulo Inventario |
-| `/docs/salapcs/` | Documentación del módulo Sala de PCs |
-| `/docs/seguridad/` | Documentación del módulo Seguridad |
-| `/docs/dashboard/` | Documentación del módulo Dashboard |
-
-```json
-{
-  "links": {
-    "next":     "http://127.0.0.1:8000/api/v1/dispositivos?page=2",
-    "previous": null
-  },
-  "items":  42,
-  "status": "ok",
-  "page":   "1/5",
-  "data":   [ ... ]
-}
-```
-
-### Parámetros de consulta
-
-| Parámetro | Tipo | Predeterminado | Descripción |
-|-----------|------|----------------|-------------|
-| `page` | integer | 1 | Número de página. |
-| `page_size` / `Limit` | integer | 10 (inventario) / 20 (salapcs) | Registros por página (máx. 100). |
+El número de página se controla con el parámetro `page`.
 
 ---
 
@@ -314,21 +183,87 @@ http://127.0.0.1:8000/docs/
 | `200 OK` | Éxito | GET, PUT y DELETE exitosos. |
 | `201 Created` | Recurso creado | POST exitoso. |
 | `400 Bad Request` | Error de validación | Los datos no pasaron la validación. |
-| `401 Unauthorized` | Sin autorización | Token JWT ausente, inválido o expirado. |
-| `403 Forbidden` | Permisos insuficientes | El usuario no tiene rol admin (DELETE). |
 | `404 Not Found` | No encontrado | El recurso no existe. |
+| `409 Conflict` | Conflicto de recurso | La operación choca con el estado actual (ej.: reservar la sala en una fecha y hora ya ocupadas). |
+| `429 Too Many Requests` | Límite superado | 100 peticiones/día para clientes anónimos. |
+| `500 Internal Server Error` | Error interno | Error inesperado en el servidor. |
 
-**Estructura de error (400):**
+**Estructura de error de validación (400):**
 
 ```json
 {
   "status":  "error",
-  "message": "Error de validación",
+  "message": "error de validación",
   "errors": {
     "campo": ["Este campo es obligatorio."]
   }
 }
 ```
+
+> El formato exacto del cuerpo de error varía ligeramente entre módulos (algunos usan `message` con los errores y otros una clave `error`/`errors`), pero siempre incluye `status: "error"`.
+
+---
+
+## Endpoints
+
+### Inventario — Dispositivos
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/api/v1/dispositivos` | Listar dispositivos (paginado, orden `-id`) |
+| `POST` | `/api/v1/dispositivos` | Crear dispositivo |
+| `GET` | `/api/v1/dispositivos/{id}` | Obtener dispositivo por ID |
+| `PUT` | `/api/v1/dispositivos/{id}` | Actualizar dispositivo |
+| `DELETE` | `/api/v1/dispositivos/{id}` | Eliminar dispositivo (CASCADE sobre equipos) |
+
+### Inventario — Equipos
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/api/v1/equipos` | Listar equipos (paginado, orden por `estacion`) |
+| `POST` | `/api/v1/equipos` | Registrar equipo |
+| `GET` | `/api/v1/equipos/pdf` | Descargar reporte PDF del inventario |
+| `GET` | `/api/v1/equipos/{id}` | Obtener equipo por ID |
+| `PUT` | `/api/v1/equipos/{id}` | Actualizar equipo |
+| `DELETE` | `/api/v1/equipos/{id}` | Eliminar equipo |
+| `GET` | `/api/v1/equipos/dispositivo/{id}` | Equipos por tipo de dispositivo (paginado) |
+
+### Inventario — Consumibles
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/api/v1/consumibles` | Listar consumibles **con bajo stock** (paginado, ver nota) |
+| `POST` | `/api/v1/consumibles` | Crear consumible |
+| `GET` | `/api/v1/consumibles/{id}` | Obtener consumible por ID |
+| `PUT` | `/api/v1/consumibles/{id}` | Actualizar consumible |
+| `DELETE` | `/api/v1/consumibles/{id}` | Eliminar consumible |
+
+### Sala de PCs — Profesores
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/api/v1/profesores` | Listar profesores (paginado) |
+| `POST` | `/api/v1/profesores` | Registrar profesor |
+| `GET` | `/api/v1/profesores/{id}` | Obtener profesor por ID |
+| `PUT` | `/api/v1/profesores/{id}` | Actualizar profesor |
+| `DELETE` | `/api/v1/profesores/{id}` | Eliminar profesor (CASCADE sobre reservas) |
+
+### Sala de PCs — Reservas
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/api/v1/salapcs` | Listar reservas (paginado) |
+| `POST` | `/api/v1/salapcs` | Crear reserva |
+| `GET` | `/api/v1/salapcs/{id}` | Obtener reserva por ID |
+| `PUT` | `/api/v1/salapcs/{id}` | Actualizar reserva |
+| `DELETE` | `/api/v1/salapcs/{id}` | Eliminar reserva |
+| `GET` | `/api/v1/salapcs/reportes/horario` | Descargar reporte PDF del horario semanal |
+
+### Dashboard
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/api/v1/dashboard/` | Resumen semanal del sistema |
 
 ---
 
@@ -352,11 +287,11 @@ http://127.0.0.1:8000/docs/
 | `dispositivo` | FK → Dispositivo | requerido | Tipo al que pertenece (CASCADE). |
 | `marca` | string(100) | opcional | Marca del fabricante. |
 | `modelo` | string(100) | opcional | Modelo específico. |
-| `identificador` | string(100) | requerido, único | Código o número de serie. |
-| `estacion` | integer | requerido, único | Número de estación de trabajo. |
-| `descripcion` | text | opcional | Notas adicionales. |
-| `date_reg` | date | requerido | Fecha de ingreso. Formato: `YYYY-MM-DD`. |
+| `identificador` | string(100) | autogenerado, único, solo lectura | Código generado por el servidor con formato `ccpNNNN`. **No se envía en el body.** |
+| `estacion` | integer | requerido | Número de estación de trabajo. |
 | `is_active` | boolean | opcional | Indica si el equipo está activo. Predeterminado: `true`. |
+| `descripcion` | text | opcional | Notas adicionales. |
+| `date_reg` | date | auto, solo lectura | Fecha de ingreso (`auto_now_add`). |
 
 #### `Consumible` — tabla `consumible`
 
@@ -374,20 +309,10 @@ http://127.0.0.1:8000/docs/
 #### `GET /api/v1/dispositivos`
 Lista todos los dispositivos ordenados por `-id`, paginado.
 
-**Respuesta 200:**
+**Respuesta 200 — campo `data`:**
 ```json
-{
-  "links": { "next": null, "previous": null },
-  "items": 15,
-  "status": "ok",
-  "page": "1/2",
-  "data": [
-    { "id": 3, "name": "Computadora de Escritorio", "descripcion": "PC con torre ATX" }
-  ]
-}
+{ "id": 3, "name": "Computadora de Escritorio", "descripcion": "PC con torre ATX" }
 ```
-
----
 
 #### `POST /api/v1/dispositivos`
 Crea un nuevo tipo de dispositivo.
@@ -396,38 +321,24 @@ Crea un nuevo tipo de dispositivo.
 ```json
 { "name": "Monitor", "descripcion": "Pantalla LED 24 pulgadas" }
 ```
-
 **Respuesta 201:**
 ```json
 { "status": "ok", "message": "Registro creado exitosamente" }
 ```
 
----
-
 #### `GET /api/v1/dispositivos/{id}`
-Retorna el detalle de un dispositivo.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "data": { "id": 1, "name": "Monitor", "descripcion": "Pantalla LED 24 pulgadas" } }
 ```
 
----
-
 #### `PUT /api/v1/dispositivos/{id}`
-Actualización completa de un dispositivo. Requiere todos los campos.
-
-**Respuesta 200:**
+Actualización completa. Requiere todos los campos.
 ```json
 { "status": "ok", "message": "Registro actualizado exitosamente" }
 ```
 
----
-
 #### `DELETE /api/v1/dispositivos/{id}`
-Elimina un dispositivo y **todos los equipos asociados** (CASCADE).
-
-**Respuesta 200:**
+Elimina el dispositivo y **todos los equipos asociados** (CASCADE).
 ```json
 { "status": "ok", "message": "Registro eliminado exitosamente" }
 ```
@@ -437,7 +348,7 @@ Elimina un dispositivo y **todos los equipos asociados** (CASCADE).
 ### Equipos
 
 #### `GET /api/v1/equipos`
-Lista todos los equipos, paginado.
+Lista todos los equipos ordenados por `estacion`, paginado.
 
 **Respuesta 200 — campo `data`:**
 ```json
@@ -447,7 +358,7 @@ Lista todos los equipos, paginado.
   "dispositivo_name": "Computadora de Escritorio",
   "marca": "Dell",
   "modelo": "OptiPlex 7090",
-  "identificador": "SN-001-DELL",
+  "identificador": "ccp0001",
   "estacion": 1,
   "descripcion": null,
   "date_reg": "2024-03-15",
@@ -455,10 +366,8 @@ Lista todos los equipos, paginado.
 }
 ```
 
----
-
 #### `POST /api/v1/equipos`
-Registra un nuevo equipo.
+Registra un nuevo equipo. **`identificador` y `date_reg` se generan automáticamente**, no los envíes.
 
 **Body:**
 ```json
@@ -466,101 +375,67 @@ Registra un nuevo equipo.
   "dispositivo":   1,
   "marca":         "HP",
   "modelo":        "ProDesk 400 G7",
-  "identificador": "INV-2024-015",
   "estacion":      15,
   "descripcion":   "Equipo con SSD 512GB",
-  "date_reg":      "2024-09-01"
+  "is_active":     true
 }
 ```
-
 **Respuesta 201:**
 ```json
 { "status": "ok", "data": "registro creado correctamente" }
 ```
 
----
-
 #### `GET /api/v1/equipos/{id}`
-Retorna el detalle de un equipo.
-
----
+Retorna el detalle de un equipo (`{ "status": "ok", "data": { ... } }`).
 
 #### `PUT /api/v1/equipos/{id}`
-Actualización completa de un equipo.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "data": "registro actualizado correctamente" }
 ```
 
----
-
 #### `DELETE /api/v1/equipos/{id}`
-Elimina un equipo del inventario.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "data": "registro eliminado correctamente" }
 ```
 
----
-
 #### `GET /api/v1/equipos/dispositivo/{dispositivo_id}`
-Lista los equipos filtrados por tipo de dispositivo, ordenados por `-id`, paginado.
+Lista los equipos filtrados por tipo de dispositivo, orden `-id`, paginado.
 
 ---
 
 ### Consumibles
 
 #### `GET /api/v1/consumibles`
-Lista todos los consumibles ordenados por `-id`, paginado.
+Lista consumibles paginado, orden de inserción.
+
+> ⚠️ **Importante:** este listado **solo devuelve los consumibles con `cantidad <= 3`** (alerta de bajo stock). Para acceder a un consumible con stock alto, usa su endpoint de detalle por ID.
 
 **Respuesta 200 — campo `data`:**
 ```json
-{ "id": 1, "name": "Cable HDMI", "cantidad": 12, "descripcion": "Cables de repuesto para monitores" }
+{ "id": 1, "name": "Cable HDMI", "cantidad": 2, "descripcion": "Cables de repuesto para monitores" }
 ```
 
----
-
 #### `POST /api/v1/consumibles`
-Crea un nuevo consumible.
-
 **Body:**
 ```json
 { "name": "Cable HDMI", "cantidad": 12, "descripcion": "Cables de repuesto para monitores" }
 ```
-
 **Respuesta 201:**
 ```json
 { "status": "ok", "message": "Registro creado exitosamente" }
 ```
 
----
-
 #### `GET /api/v1/consumibles/{id}`
-Retorna el detalle de un consumible.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "data": { "id": 1, "name": "Cable HDMI", "cantidad": 12, "descripcion": "Cables de repuesto para monitores" } }
 ```
 
----
-
 #### `PUT /api/v1/consumibles/{id}`
-Actualización completa de un consumible. Requiere todos los campos.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "message": "Registro actualizado exitosamente" }
 ```
 
----
-
 #### `DELETE /api/v1/consumibles/{id}`
-Elimina un consumible del inventario. Requiere rol **admin**.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "message": "Registro eliminado exitosamente" }
 ```
@@ -592,54 +467,42 @@ Elimina un consumible del inventario. Requiere rol **admin**.
 | `date` | date | requerido | Fecha de uso. Formato: `YYYY-MM-DD`. |
 | `hour` | time | requerido | Hora de inicio. Formato: `HH:MM:SS`. |
 
+> **Horario único:** la combinación `(date, hour)` es **única** (`unique_together`). No se puede registrar dos reservas en la misma fecha y hora; al intentarlo la API devuelve `409 Conflict`.
+>
+> **Franjas horarias (frontend):** el formulario de agendamiento acota la hora de inicio a tramos de **30 minutos, de 08:00 a 17:00**. El backend acepta cualquier `HH:MM:SS` válido; la restricción de tramos se aplica solo en la interfaz.
+
 ---
 
 ### Profesores
 
 #### `GET /api/v1/profesores`
-Lista todos los profesores, paginado. Usa el parámetro `Limit` para el tamaño de página.
+Lista profesores, paginado (tamaño con `Limit`).
 
 **Respuesta 200 — campo `data`:**
 ```json
-{ "nombre": "Carlos", "apellido": "González", "correo": "cgonzalez@colegio.cl", "asignatura": "Tecnología e Informática" }
+{ "id": 1, "nombre": "Carlos", "apellido": "González", "correo": "cgonzalez@colegio.cl", "asignatura": "Tecnología e Informática" }
 ```
 
----
-
 #### `POST /api/v1/profesores`
-Registra un nuevo profesor.
-
 **Body:**
 ```json
 { "nombre": "Ana", "apellido": "Martínez", "correo": "amartinez@colegio.cl", "asignatura": "Matemáticas" }
 ```
-
 **Respuesta 201:**
 ```json
 { "status": "ok", "message": "Profesor creado exitosamente" }
 ```
 
----
-
 #### `GET /api/v1/profesores/{id}`
 Retorna el detalle de un profesor.
 
----
-
 #### `PUT /api/v1/profesores/{id}`
-Actualización completa de un profesor.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "message": "Profesor actualizado exitosamente" }
 ```
 
----
-
 #### `DELETE /api/v1/profesores/{id}`
-Elimina un profesor y **todas sus reservas de sala** (CASCADE).
-
-**Respuesta 200:**
+Elimina el profesor y **todas sus reservas** (CASCADE).
 ```json
 { "status": "ok", "message": "Profesor eliminado correctamente" }
 ```
@@ -654,6 +517,7 @@ Lista todas las reservas, paginado.
 **Respuesta 200 — campo `data`:**
 ```json
 {
+  "id": 5,
   "profesor":      3,
   "profesor_name": "Ana",
   "curso":         "3°B",
@@ -663,11 +527,7 @@ Lista todas las reservas, paginado.
 }
 ```
 
----
-
 #### `POST /api/v1/salapcs`
-Registra una nueva reserva de sala.
-
 **Body:**
 ```json
 {
@@ -678,35 +538,94 @@ Registra una nueva reserva de sala.
   "hour":       "10:00:00"
 }
 ```
-
 **Respuesta 201:**
 ```json
 { "status": "ok", "message": "Reserva de sala creada exitosamente" }
 ```
 
----
+**Respuesta 409 — fecha y hora ya ocupadas:**
+```json
+{ "status": "error", "message": "Ya existe una reserva para esa fecha y hora. Elige otro horario." }
+```
 
 #### `GET /api/v1/salapcs/{id}`
 Retorna el detalle de una reserva.
 
----
-
 #### `PUT /api/v1/salapcs/{id}`
-Actualización completa de una reserva. Todos los campos son requeridos.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "message": "Reserva de sala actualizada exitosamente" }
 ```
 
----
+> Al igual que el POST, si se cambia la reserva a una `date` y `hour` ya ocupadas por **otra** reserva, la API responde `409 Conflict` con el mismo mensaje.
 
 #### `DELETE /api/v1/salapcs/{id}`
-Elimina una reserva de sala.
-
-**Respuesta 200:**
 ```json
 { "status": "ok", "message": "Reserva de sala eliminada correctamente" }
 ```
 
 ---
+
+## Módulo Dashboard
+
+#### `GET /api/v1/dashboard/`
+Devuelve un resumen del estado actual y las reservas de la **semana en curso** (lunes a domingo, según la zona horaria `America/Santiago`).
+
+**Respuesta 200:**
+```json
+{
+  "numero_equipos": 42,
+  "numero_consumibles_0": 3,
+  "salas": [
+    {
+      "id": 5,
+      "profesor": 3,
+      "profesor_name": "Ana",
+      "curso": "3°B",
+      "asignatura": "Tecnología",
+      "date": "2026-04-01",
+      "hour": "10:00:00"
+    }
+  ]
+}
+```
+
+| Campo | Descripción |
+|-------|-------------|
+| `numero_equipos` | Total de equipos registrados. |
+| `numero_consumibles_0` | Consumibles con stock **bajo** (`cantidad <= 3`). |
+| `salas` | Reservas de la semana actual, ordenadas por fecha y hora. |
+
+---
+
+## Reportes PDF
+
+Dos endpoints generan reportes descargables (`Content-Disposition: attachment`) con **reportlab**:
+
+| Ruta | Archivo | Contenido |
+|------|---------|-----------|
+| `GET /api/v1/equipos/pdf` | `reporte_tabla.pdf` | Tabla completa del inventario de equipos a la fecha. |
+| `GET /api/v1/salapcs/reportes/horario` | `reporte_horario.pdf` | Horario de uso de la sala de la semana en curso. |
+
+---
+
+## Documentación web
+
+La API incluye una interfaz de documentación HTML interactiva (app `doc`, templates Django):
+
+**Producción:**
+```
+https://backend-inventario-computadores-production.up.railway.app/docs/
+```
+
+**Desarrollo local:**
+```
+http://127.0.0.1:8000/docs/
+```
+
+| Ruta | Contenido |
+|------|----------|
+| `/docs/` | Página principal: overview, paginación y códigos HTTP |
+| `/docs/inventario/` | Documentación del módulo Inventario |
+| `/docs/salapcs/` | Documentación del módulo Sala de PCs |
+| `/docs/dashboard/` | Documentación del módulo Dashboard |
+| `/docs/seguridad/` | Página heredada del módulo de seguridad (la API ya no expone autenticación) |

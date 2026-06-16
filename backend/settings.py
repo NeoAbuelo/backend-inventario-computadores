@@ -34,8 +34,8 @@ INSTALLED_APPS = [
     'inventario',
     'salapcs',
     'doc',
+    'dashboard',
     'seguridad',
-    'dashboard'
 ]
 
 MIDDLEWARE = [
@@ -74,11 +74,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-   #'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+   'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': BASE_DIR / 'db.sqlite3',
+    # }
 }
 
 
@@ -130,14 +130,32 @@ STORAGES = {
 }
 
 REST_FRAMEWORK = {
+    # Toda la API queda autenticada por defecto. Las vistas que deben ser
+    # públicas (login y el flujo de agendamiento) lo declaran con AllowAny.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'seguridad.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
+        'anon': '60/minute',
     }
 }
 
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+# Configuración del JWT (python-jose). La firma usa SECRET_KEY.
+JWT_ALGORITHM = 'HS512'
+JWT_EXP_DAYS = 1
 
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+CORS_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
+# Necesario para enviar el encabezado Authorization desde el front.
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'authorization',
+    'content-type',
+    'origin',
+    'x-requested-with',
+]

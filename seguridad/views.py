@@ -1,102 +1,117 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.contrib.auth import authenticate
+from datetime import datetime, timedelta, timezone
+
 from django.conf import settings
-
-from django.db import transaction
-from jose import jwt
-import os 
-import uuid
-import time
-from datetime import datetime, timedelta
-
-from dotenv import load_dotenv
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
-from .models import Perfil
-from .serializer import PerfilSerializer
+from jose import jwt
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .decorators import logguer_required
 
-load_dotenv()
+def generar_token(user):
+    ahora = datetime.now(tz=timezone.utc)
+    payload = {
+        "user_id": user.id,
+        "username": user.username,
+        "iat": int(ahora.timestamp()),
+        "exp": int((ahora + timedelta(days=settings.JWT_EXP_DAYS)).timestamp()),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-# Create your views here.
-class CreateUserView(APIView):
 
-    def post(self, request, format=None):
-        if request.data.get('username')==None or not request.data.get('username'):
-            return Response({'error': 'nombre de usuario es requerido'}, status=status.HTTP_400_BAD_REQUEST) 
-        if request.data.get('password')==None or not request.data.get('password'):
-            return Response({'error': 'contraseña es requerida'}, status=status.HTTP_400_BAD_REQUEST)
-        if request.data.get('email')==None or not request.data.get('email'):
-            return Response({'error': 'correo electrónico es requerido'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
-        if User.objects.filter(email=request.data.get('email')).exists():
-            return Response({'error': 'correo electrónico ya existe'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            with transaction.atomic():
-                user = User.objects.create_user(
-                    username=request.data.get('username'),
-                    email=request.data.get('email'),
-                    password=request.data.get('password')
-                )
-                perfil = Perfil.objects.create(
-                    user=user,
-                    cargo=request.data.get('cargo', 'Profesor'),
-                    permissions = 'profesor'
-                )
-                
-                return Response({'message': 'Usuario creado exitosamente'}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({'error': 'Error inesperado'}, status=status.HTTP_400_BAD_REQUEST)
-        
-class LogginView(APIView):
+def serializar_usuario(user):
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "is_staff": user.is_staff,
+    }
+
+
+class LoginView(APIView):
+    """Inicio de sesión público. Devuelve un JWT y los datos del usuario."""
+
+    permission_classes = [AllowAny]
 
     def post(self, request, format=None):
-        if request.data.get('email')==None or not request.data.get('email'):
-            return Response({'error': 'correo electrónico es requerido'}, status=status.HTTP_400_BAD_REQUEST) 
-        if request.data.get('password')==None or not request.data.get('password'):
-            return Response({'error': 'contraseña es requerida'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            user = User.objects.get(email=request.data.get('email'))
-        except User.DoesNotExist:
-            return Response({'error': 'credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        user = authenticate(request, username=user.username, password=request.data.get('password'))
-        if user is not None:
-            fecha = datetime.now()
-            despues = fecha + timedelta(days=1)
-            feche_unix = int(datetime.timestamp(despues))
-            payload = {
-                'user_id': user.id,
-                'ISS': os.getenv('BASE_URL'),
-                'iat': int(time.time()),
-                'exp': feche_unix,
-                'role': user.perfil.permissions
-            }
-            try:
-                token = jwt.encode(payload, os.getenv('SECRET_KEY'), algorithm='HS512')
-                return Response({
-                        'id': user.id, 
-                        'username': user.username, 
-                        'token': token,
-                        'role': user.perfil.permissions}, status=status.HTTP_200_OK)
-            except Exception as e:
-                return Response({'error': 'Error al generar el token'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            return Response({'error': 'credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
-        
+        identificador = request.data.get("username") or request.data.get("email")
+        password = request.data.get("password")
 
-class PerfilView(APIView):
+        if not identificador or not password:
+            return Response(
+                {"status": "error", "message": "Usuario y contraseña son requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    @logguer_required
+        # Permite iniciar sesión con el correo además del nombre de usuario.
+        username = identificador
+        if "@" in identificador:
+            user_obj = User.objects.filter(email=identificador).first()
+            if user_obj:
+                username = user_obj.username
+
+        user = authenticate(request, username=username, password=password)
+        if user is None:
+            return Response(
+                {"status": "error", "message": "Credenciales inválidas"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return Response(
+            {
+                "status": "ok",
+                "data": {"token": generar_token(user), "user": serializar_usuario(user)},
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class RegisterView(APIView):
+    """Crea cuentas. Protegido: solo usuarios autenticados pueden registrar."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        email = request.data.get("email", "")
+
+        if not username or not password:
+            return Response(
+                {"status": "error", "message": "Usuario y contraseña son requeridos"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {"status": "error", "message": "El usuario ya existe"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if email and User.objects.filter(email=email).exists():
+            return Response(
+                {"status": "error", "message": "El correo ya está registrado"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = User.objects.create_user(username=username, email=email, password=password)
+        return Response(
+            {
+                "status": "ok",
+                "message": "Usuario creado exitosamente",
+                "data": serializar_usuario(user),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class MeView(APIView):
+    """Devuelve los datos del usuario autenticado (validación de sesión)."""
+
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, format=None):
-        try:
-            perfil = Perfil.objects.get(user=request.user_id)
-            serializer = PerfilSerializer(perfil)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Perfil.DoesNotExist:
-            return Response({'error': 'Perfil no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"status": "ok", "data": serializar_usuario(request.user)},
+            status=status.HTTP_200_OK,
+        )

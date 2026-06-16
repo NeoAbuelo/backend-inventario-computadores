@@ -542,6 +542,7 @@ body {
 .response-code.r400, .response-code.r404 { background: #fee2e2; color: #b91c1c; }
 .response-code.r401 { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 .response-code.r403 { background: #fce7f3; color: #9d174d; border: 1px solid #f9a8d4; }
+.response-code.r409 { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
 .response-code.r500 { background: #f1f5f9; color: #475569; }
 
 /* ── Callouts ── */

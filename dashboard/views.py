@@ -9,11 +9,9 @@ from salapcs.serializers import SalaPCSerializer
 
 from datetime import timedelta
 
-from seguridad.decorators import logguer_required
 
 class DashboardView(APIView):
 
-    @logguer_required    
     def get(self, request, format=None):
         
         hoy = timezone.localdate(timezone.now())
@@ -26,13 +24,11 @@ class DashboardView(APIView):
             salas = SalaPC.objects.filter(date__range=[lunes, domingo]).order_by('date', 'hour')
             sala_serializer = SalaPCSerializer(salas, many=True)
             data = {
-                'user_id': request.user_id,
                 'numero_equipos': equipos,
                 'numero_consumibles_0': consumibles,
                 'salas': sala_serializer.data
             }
-                           
-            
+                                       
             return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'error': f'error inesperado {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': f'error inesperado'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

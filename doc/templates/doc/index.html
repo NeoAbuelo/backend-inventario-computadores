@@ -8,7 +8,9 @@
 <!-- ─── Hero ─── -->
 <div class="section">
   <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px;">
-    <div style="width:64px;height:64px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;">🖥️</div>
+    <div
+      style="width:64px;height:64px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;">
+      🖥️</div>
     <div>
       <h1 class="section-title" style="border:none;margin:0;padding:0;font-size:28px;">InvCompu API</h1>
       <p class="section-subtitle" style="margin:4px 0 0;">Sistema de Inventario y Gestión de Sala de Computación</p>
@@ -50,19 +52,22 @@
     <div class="card">
       <div class="card-icon blue">🗄️</div>
       <h3>Módulo Inventario</h3>
-      <p>Gestión de dispositivos (categorías de hardware), equipos físicos y consumibles del laboratorio. CRUD completo con paginación y filtrado por tipo.</p>
+      <p>Gestión de dispositivos (categorías de hardware), equipos físicos y consumibles del laboratorio. CRUD completo
+        con paginación y filtrado por tipo.</p>
       <a class="card-link" href="{% url 'doc:inventario' %}">Ver documentación →</a>
     </div>
     <div class="card">
       <div class="card-icon green">🏫</div>
       <h3>Módulo Sala de PCs</h3>
-      <p>Administración de profesores y reservas de uso de la sala de computación. Control de quién usa el laboratorio, cuándo y con qué curso.</p>
+      <p>Administración de profesores y reservas de uso de la sala de computación. Control de quién usa el laboratorio,
+        cuándo y con qué curso.</p>
       <a class="card-link" href="{% url 'doc:salapcs' %}">Ver documentación →</a>
     </div>
     <div class="card">
       <div class="card-icon" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">🔐</div>
       <h3>Módulo Seguridad</h3>
-      <p>Registro de usuarios, autenticación JWT y gestión de perfiles. Dos niveles de permisos: <strong>admin</strong> y <strong>profesor</strong>.</p>
+      <p>Registro de usuarios, autenticación JWT y gestión de perfiles. Dos niveles de permisos: <strong>admin</strong>
+        y <strong>profesor</strong>.</p>
       <a class="card-link" href="{% url 'doc:seguridad' %}">Ver documentación →</a>
     </div>
     <div class="card">
@@ -96,8 +101,10 @@
   <div class="callout warning">
     <span class="callout-icon">⚠️</span>
     <div>
-      En <strong>desarrollo local</strong> el host habitual es <code style="font-family:monospace;">http://127.0.0.1:8000</code>.
-      El servidor de <strong>producción</strong> está desplegado en Railway: <code style="font-family:monospace;">https://backend-inventario-computadores-production.up.railway.app</code>.
+      En <strong>desarrollo local</strong> el host habitual es <code
+        style="font-family:monospace;">http://127.0.0.1:8000</code>.
+      El servidor de <strong>producción</strong> está desplegado en Railway: <code
+        style="font-family:monospace;">https://backend-inventario-computadores-production.up.railway.app</code>.
     </div>
   </div>
 </div>
@@ -129,7 +136,8 @@
           <td><span class="field-name">page_size</span></td>
           <td><span class="field-type">integer</span></td>
           <td>10 (Inventario) / 20 (SalaPC)</td>
-          <td>Cantidad de registros por página (máx. 50). En el módulo SalaPC el parámetro se llama <code>Limit</code>.</td>
+          <td>Cantidad de registros por página (máx. 50). En el módulo SalaPC el parámetro se llama <code>Limit</code>.
+          </td>
         </tr>
       </tbody>
     </table>
@@ -153,7 +161,11 @@
 
   <table class="params-table">
     <thead>
-      <tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr>
+      <tr>
+        <th>Campo</th>
+        <th>Tipo</th>
+        <th>Descripción</th>
+      </tr>
     </thead>
     <tbody>
       <tr>
@@ -197,7 +209,11 @@
 
   <table class="params-table">
     <thead>
-      <tr><th>Código</th><th>Significado</th><th>Descripción</th></tr>
+      <tr>
+        <th>Código</th>
+        <th>Significado</th>
+        <th>Descripción</th>
+      </tr>
     </thead>
     <tbody>
       <tr>
@@ -229,6 +245,11 @@
         <td><span class="response-code r404">404 Not Found</span></td>
         <td>No encontrado</td>
         <td>El recurso solicitado no existe en la base de datos.</td>
+      </tr>
+      <tr>
+        <td><span class="response-code r409">409 Conflict</span></td>
+        <td>Conflicto de recurso</td>
+        <td>La operación choca con el estado actual. Ej.: reservar la sala en una fecha y hora ya ocupadas.</td>
       </tr>
       <tr>
         <td><span class="response-code r400">429 Too Many Requests</span></td>
@@ -297,7 +318,11 @@
   <h4 style="font-size:14px;font-weight:700;margin:16px 0 10px;">Niveles de acceso</h4>
   <table class="params-table">
     <thead>
-      <tr><th>Nivel</th><th>Rol requerido</th><th>Operaciones</th></tr>
+      <tr>
+        <th>Nivel</th>
+        <th>Rol requerido</th>
+        <th>Operaciones</th>
+      </tr>
     </thead>
     <tbody>
       <tr>
@@ -315,7 +340,11 @@
 
   <table class="params-table" style="margin-top:16px;">
     <thead>
-      <tr><th>Escenario</th><th>Código</th><th>Mensaje</th></tr>
+      <tr>
+        <th>Escenario</th>
+        <th>Código</th>
+        <th>Mensaje</th>
+      </tr>
     </thead>
     <tbody>
       <tr>
@@ -363,13 +392,18 @@
 
   <table class="params-table">
     <thead>
-      <tr><th>Tipo de cliente</th><th>Límite</th><th>Ventana</th><th>Identificador</th></tr>
+      <tr>
+        <th>Tipo de cliente</th>
+        <th>Límite</th>
+        <th>Ventana</th>
+        <th>Identificador</th>
+      </tr>
     </thead>
     <tbody>
       <tr>
         <td>Anónimo (sin token)</td>
-        <td><strong>1000 peticiones</strong></td>
-        <td>Por día</td>
+        <td><strong>60 peticiones</strong></td>
+        <td>Por minuto</td>
         <td>IP de origen</td>
       </tr>
     </tbody>

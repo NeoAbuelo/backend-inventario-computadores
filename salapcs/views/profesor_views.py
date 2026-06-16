@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django.http import Http404
 
@@ -8,12 +9,17 @@ from ..models import Profesor
 from ..serializers import ProfesorSerializer
 from .paginatios import CustomPagination
 
-from seguridad.decorators import logguer_required, admin_required
 
 # Create your views here.
 class ProfesorList(APIView):
-    
-    @logguer_required
+
+    def get_permissions(self):
+        # El listado es público (lo usa el formulario de agendamiento para el
+        # desplegable de profesores). Crear profesores requiere autenticación.
+        if self.request.method == "POST":
+            return [IsAuthenticated()]
+        return [AllowAny()]
+
     def get(self, request,format=None):
         profesores = Profesor.objects.all()
         paginator = CustomPagination()
@@ -21,7 +27,6 @@ class ProfesorList(APIView):
         serializer = ProfesorSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
     
-    @logguer_required
     def post(self, request, format=None):
         serializer = ProfesorSerializer(data=request.data)
         if serializer.is_valid():
@@ -43,7 +48,6 @@ class ProfesorDetail(APIView):
         except Profesor.DoesNotExist:
             raise Http404
     
-    @logguer_required
     def get(self, request, pk,format=None):
 
         profesor = self.get_object(pk)
@@ -53,7 +57,6 @@ class ProfesorDetail(APIView):
             "data": serializer.data}, status=status.HTTP_200_OK)
 
 
-    @logguer_required
     def put(self, request, pk, format=None):
         profesor = self.get_object(pk)
         serializer = ProfesorSerializer(profesor, data=request.data)
@@ -69,7 +72,6 @@ class ProfesorDetail(APIView):
                         "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 
-    @admin_required
     def delete(self, request, pk, format=None):
         profesor = self.get_object(pk)
         try:

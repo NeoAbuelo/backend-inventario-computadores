@@ -27,6 +27,24 @@
     </div>
   </div>
 
+  <div class="callout warning">
+    <span class="callout-icon">⚠️</span>
+    <div>
+      <strong>Horario único:</strong> No se permiten reservas duplicadas. La combinación de
+      <code>date</code> + <code>hour</code> es única (restricción <code>unique_together</code> en el modelo).
+      Crear o actualizar una reserva sobre una fecha y hora ya ocupadas devuelve <code>409 Conflict</code>.
+    </div>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <div>
+      <strong>Franjas horarias:</strong> El formulario de agendamiento del frontend acota la hora de inicio
+      a tramos de <strong>30 minutos, de 08:00 a 17:00</strong>. El backend acepta cualquier <code>HH:MM:SS</code>
+      válido; la restricción de tramos se aplica en la interfaz.
+    </div>
+  </div>
+
   <div class="stats-row">
     <div class="stat-box purple">
       <div class="stat-num">5</div>
@@ -140,7 +158,7 @@
             <td><span class="field-name">hour</span></td>
             <td><span class="field-type">time</span></td>
             <td><span class="badge-required">requerido</span></td>
-            <td>Hora de inicio. Formato: <code>HH:MM:SS</code>.</td>
+            <td>Hora de inicio. Formato: <code>HH:MM:SS</code>. Junto con <code>date</code> forma una clave única (no se repiten reservas en la misma fecha y hora).</td>
           </tr>
         </tbody>
       </table>
@@ -457,6 +475,24 @@
       <div class="response-codes">
         <span class="response-code r201">201 Created</span>
         <span class="response-code r400">400 Bad Request</span>
+        <span class="response-code r409">409 Conflict</span>
+      </div>
+
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>
+          Si ya existe una reserva en esa <code>date</code> y <code>hour</code>, la API responde
+          <code>409 Conflict</code> sin crear el registro.
+        </div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>409 Conflict</span></div>
+        <div class="code-body">
+          <pre><span class="json-punc">{</span>
+  <span class="json-key">"status"</span><span class="json-punc">:</span>  <span class="json-str">"error"</span><span class="json-punc">,</span>
+  <span class="json-key">"message"</span><span class="json-punc">:</span> <span class="json-str">"Ya existe una reserva para esa fecha y hora. Elige otro horario."</span>
+<span class="json-punc">}</span></pre>
+        </div>
       </div>
     </div>
   </div>
@@ -510,10 +546,18 @@
         <div>Actualización <strong>completa</strong>. Se deben enviar todos los campos requeridos.</div>
       </div>
       <p style="font-size:13.5px;color:#64748b;margin-bottom:16px;">Mismos campos que el POST. Ver sección anterior para referencia.</p>
+      <div class="callout warning">
+        <span class="callout-icon">⚠️</span>
+        <div>
+          Igual que en el POST: cambiar la reserva a una <code>date</code> y <code>hour</code> ya ocupadas
+          por <strong>otra</strong> reserva devuelve <code>409 Conflict</code>.
+        </div>
+      </div>
       <div class="response-codes">
         <span class="response-code r200">200 OK</span>
         <span class="response-code r400">400 Bad Request</span>
         <span class="response-code r404">404 Not Found</span>
+        <span class="response-code r409">409 Conflict</span>
       </div>
     </div>
   </div>

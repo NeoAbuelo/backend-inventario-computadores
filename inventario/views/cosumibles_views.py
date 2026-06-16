@@ -8,18 +8,16 @@ from ..serializers import ConsumibleSerializer
 
 from .paginations import CustomPagination
 
-from seguridad.decorators import logguer_required, admin_required
 
 class ConsumibleList(APIView):
-    @logguer_required
+
     def get(self, request, format=None):
-        consumibles = Consumible.objects.filter(cantidad__lte=3).all()
+        consumibles = Consumible.objects.all()
         paginator = CustomPagination()
         page = paginator.paginate_queryset(consumibles, request)
         serializer = ConsumibleSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
     
-    @logguer_required
     def post(self, request, format=None):
         
         data = ConsumibleSerializer(data=request.data)
@@ -49,14 +47,12 @@ class ConsumibleDetail(APIView):
         except Consumible.DoesNotExist:
             raise Http404
     
-    @logguer_required
     def get(self, request, pk, format=None ):
         consumible = self.get_object(pk)
         data_json = ConsumibleSerializer(consumible)
         return Response({"status":"ok",
                          "data":data_json.data},status=status.HTTP_200_OK)
     
-    @logguer_required
     def put(self, request, pk, format=None):
         consumible = self.get_object(pk)
         data = ConsumibleSerializer(consumible, data=request.data)
@@ -78,7 +74,6 @@ class ConsumibleDetail(APIView):
             "message": data.errors
             }, status=status.HTTP_400_BAD_REQUEST)
     
-    @admin_required
     def delete(self, request, pk, format=None):
         consumible = self.get_object(pk)
         try:

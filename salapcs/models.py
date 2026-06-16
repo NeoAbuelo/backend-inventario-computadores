@@ -29,3 +29,6 @@ class SalaPC(models.Model):
         db_table = "salapc"
         verbose_name = "SalaPC"
         verbose_name_plural = "SalasPC"
+        # La sala es un recurso único: no puede reservarse dos veces en la
+        # misma fecha y hora de inicio.
+        unique_together = ("date", "hour")

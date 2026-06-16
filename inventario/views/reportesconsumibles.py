@@ -9,39 +9,41 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from django.utils import timezone
 
-from ..models import Equipo
+from ..models import Consumible
 
-# Paleta alineada con el front (Tailwind sky / gray / emerald)
+# Paleta alineada con el front (Tailwind sky / gray / red)
 SKY_900 = colors.HexColor("#0c4a6e")
 SKY_800 = colors.HexColor("#075985")
 SKY_50 = colors.HexColor("#f0f9ff")
 GRAY_200 = colors.HexColor("#e5e7eb")
-GRAY_500 = colors.HexColor("#6b7280")
 GRAY_600 = colors.HexColor("#4b5563")
 GRAY_800 = colors.HexColor("#1f2937")
-EMERALD_700 = colors.HexColor("#047857")
+RED_600 = colors.HexColor("#dc2626")
+
+# Umbral de stock bajo (igual que el front: cantidad < 4 se resalta)
+STOCK_BAJO = 4
 
 
-class ReporteEquiposView(APIView):
+class ReporteConsumiblesView(APIView):
 
     def get(self, request):
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
-        doc.title = "Reporte Detallado de Registros"
+        doc.title = "Reporte de Consumibles"
         elements = []
 
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle(
-            "TituloInventario", parent=styles["Title"],
+            "TituloConsumibles", parent=styles["Title"],
             textColor=SKY_900, fontName="Helvetica-Bold",
         )
         subtitle_style = ParagraphStyle(
-            "SubtituloInventario", parent=styles["Normal"],
+            "SubtituloConsumibles", parent=styles["Normal"],
             textColor=GRAY_600, fontSize=11, alignment=TA_CENTER, spaceBefore=2,
         )
 
-        elements.append(Paragraph("Reporte Detallado de Registros", title_style))
+        elements.append(Paragraph("Reporte de Consumibles", title_style))
         elements.append(Spacer(1, 0.15 * cm))
         elements.append(Paragraph(
             f"Inventario a la fecha: {timezone.now().strftime('%d/%m/%Y')}",
@@ -49,49 +51,45 @@ class ReporteEquiposView(APIView):
         ))
         elements.append(Spacer(1, 0.5 * cm))
 
-        data = [['Estación', 'Dispositivo', 'Marca', 'Modelo', 'N° ID', 'Estado', 'Registro', 'Descripción']]
+        data = [['Consumible', 'Cantidad', 'Descripción']]
 
-        estado_rows = []
-        queryset = Equipo.objects.order_by('estacion', 'dispositivo__name', 'identificador', 'date_reg').all()
+        cantidad_rows = []
+        queryset = Consumible.objects.order_by('name').all()
         for index, obj in enumerate(queryset, start=1):
             data.append([
-                obj.estacion,
-                (obj.dispositivo.name or "")[:10],
-                (obj.marca or "")[:10],
-                (obj.modelo or "")[:10],
-                (obj.identificador or "")[:10],
-                "Activo" if obj.is_active else "Inactivo",
-                obj.date_reg.strftime('%d/%m/%Y'),
-                (obj.descripcion or "")[:20],
+                (obj.name or "")[:35],
+                obj.cantidad,
+                (obj.descripcion or "")[:50],
             ])
-            estado_rows.append((index, obj.is_active))
+            cantidad_rows.append((index, obj.cantidad))
 
-        tabla = Table(data, colWidths=[1.8 * cm, 2.5 * cm, 2.4 * cm, 2 * cm, 1.8 * cm, 1.6 * cm, 2.1 * cm, 4.8 * cm])
+        tabla = Table(data, colWidths=[6 * cm, 3 * cm, 8 * cm])
 
         style = TableStyle([
             # Cabecera
             ('BACKGROUND', (0, 0), (-1, 0), SKY_800),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
             ('LINEBELOW', (0, 0), (-1, 0), 1, SKY_900),
             # Cuerpo
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
             ('TEXTCOLOR', (0, 1), (-1, -1), GRAY_800),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, SKY_50]),
             # General
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 7),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
             ('GRID', (0, 0), (-1, -1), 0.5, GRAY_200),
         ])
 
-        # Resalta el estado (Activo en verde, Inactivo en gris) como en el front
-        for row_index, is_active in estado_rows:
-            style.add('TEXTCOLOR', (5, row_index), (5, row_index), EMERALD_700 if is_active else GRAY_500)
-            style.add('FONTNAME', (5, row_index), (5, row_index), 'Helvetica-Bold')
+        # Resalta en rojo la cantidad cuando el stock está bajo (igual que el front)
+        for row_index, cantidad in cantidad_rows:
+            if cantidad < STOCK_BAJO:
+                style.add('TEXTCOLOR', (1, row_index), (1, row_index), RED_600)
+                style.add('FONTNAME', (1, row_index), (1, row_index), 'Helvetica-Bold')
 
         tabla.setStyle(style)
         elements.append(tabla)
@@ -99,4 +97,4 @@ class ReporteEquiposView(APIView):
         doc.build(elements)
 
         buffer.seek(0)
-        return FileResponse(buffer, as_attachment=True, filename='reporte_equipos.pdf')
+        return FileResponse(buffer, as_attachment=True, filename='reporte_consumibles.pdf')

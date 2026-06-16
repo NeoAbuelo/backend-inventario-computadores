@@ -9,19 +9,16 @@ from ..serializers import EquipoSerializer
 
 from .paginations import CustomPagination
 
-from seguridad.decorators import logguer_required, admin_required
 
 class EquipoListCreateView(APIView):
 
-    @logguer_required
     def get(self, request, format=None):
-        equipos = Equipo.objects.all()
+        equipos = Equipo.objects.all().order_by('estacion')
         paginator = CustomPagination()
         page = paginator.paginate_queryset(equipos, request)
         serializer = EquipoSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    @logguer_required
     def post(self, request, format=None):
         serializer = EquipoSerializer(data=request.data)
         if serializer.is_valid():
@@ -40,13 +37,11 @@ class EquipoDetailView(APIView):
         except Equipo.DoesNotExist:
             raise Http404
         
-    @logguer_required
     def get(self, request, pk, format=None):
         equipo = self.get_object(pk)
         serializer = EquipoSerializer(equipo)
         return Response({"status": "ok", "data": serializer.data}, status=status.HTTP_200_OK)
 
-    @logguer_required
     def put(self, request, pk, format=None):
         equipo = self.get_object(pk)
         serializer = EquipoSerializer(equipo, data=request.data)
@@ -58,7 +53,6 @@ class EquipoDetailView(APIView):
                 return Response({"status": "error", "message": "error inesperado"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": "error", "message": "error de validación", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
-    @admin_required
     def delete(self, request, pk, format=None):
         equipo = self.get_object(pk)
         try:
@@ -69,7 +63,7 @@ class EquipoDetailView(APIView):
         
         
 class EquipoListByDispositivoView(APIView):
-    @logguer_required
+    
     def get(self, request, dispositivo_id, format=None):
         equipos = Equipo.objects.filter(dispositivo_id=dispositivo_id).order_by('-id').all()
         paginator = CustomPagination()

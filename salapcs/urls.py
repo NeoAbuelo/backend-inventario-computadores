@@ -9,7 +9,7 @@ urlpatterns = [
     path("profesores/<int:pk>",ProfesorDetail.as_view(),name="detail-profesor"),
     path("salapcs",SalaPCList.as_view(),name="list-salapcs"),
     path("salapcs/<int:pk>",SalaPCDetail.as_view(),name="detail-salapc"),
-    path("reportes/horario", ReporteHorarioView.as_view(), name="reporte-horario")
+    path("salapcs/reportes/horario", ReporteHorarioView.as_view(), name="reporte-horario")
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
